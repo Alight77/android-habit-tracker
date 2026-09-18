@@ -1,7 +1,10 @@
-# 项目记录
+# Android Habit Tracker
 
-## 项目简介
-HabitTracker 是一个基于 Jetpack Compose 的习惯打卡 App，支持 habit 创建、每日打卡、连续打卡统计、跨天刷新和 Statistics 数据统计。项目定位是 Android 初/中级开发工程师简历项目，重点展示本地数据、响应式 UI、状态管理、测试和工程演进能力。
+一个基于 Kotlin、Jetpack Compose、Room、Flow / StateFlow 和 MVVM 架构实现的本地习惯打卡 App。
+
+项目支持习惯创建、每日打卡、连续打卡统计、跨天刷新和 Statistics 数据统计。项目重点不只是完成基础功能，也围绕本地数据一致性、响应式 UI 状态管理、Optimistic UI、业务逻辑测试和工程演进进行了设计。
+
+本项目用于实践 Android 现代开发技术栈下的完整功能闭环，重点覆盖本地数据持久化、响应式 UI 状态管理、业务逻辑测试、数据一致性处理和基础工程化组织。
 
 ## 技术栈
 - Kotlin
