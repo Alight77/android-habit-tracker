@@ -21,9 +21,9 @@
 - 新建 habit。
 - 今日打卡 / 取消打卡。
 - 今日状态跨天自动刷新。
-- Current streak 计算。
+- 当前连续打卡天数 Current Streak 计算。
 - Statistics 页面：今日完成数、近 7 天完成率、最高 streak、总打卡次数、habit 数量。
-- Dashboard 空状态和 checked 状态基础 polish。
+- Dashboard 空状态与已打卡状态的基础视觉优化。
 
 ## 架构设计
 ```text
@@ -66,14 +66,18 @@ SQLite
    - `calculateStats()` 覆盖空数据、单个 habit、多个 habit。
    - UseCase 覆盖 confirmed、cleanup、pending drain、timeout rollback、persist failure rollback。
 
-## 已完成提交主线
-- 初始化 Git baseline。
-- 清理 MainActivity / Navigation 命名。
+## 开发演进记录
+
+项目开发过程中主要经历了以下阶段：
+
+- 完成基础功能闭环，包括 habit 创建、列表展示和每日打卡。
+- 引入 Room 本地持久化，并通过 Flow 驱动响应式 UI 更新。
+- 清理 MainActivity / Navigation 命名，优化页面职责划分。
 - 精简旧 HabitViewModel，只保留新增 habit 职责。
-- 补充 streak/date 单测。
-- 增加 DAO transaction 写入入口。
-- 完成 optimistic lifecycle。
-- 接入跨天 today source。
-- 增加 Dashboard failure event 和 snackbar。
-- 增加 Statistics 聚合和页面。
-- 打磨 Dashboard 空状态与 checked 状态。
+- 补充 streak / date 相关单元测试。
+- 增加 DAO transaction 写入入口，收敛打卡写入一致性。
+- 完成 Optimistic UI lifecycle，处理快速重复点击、pending target、确认与回滚。
+- 接入跨天 today source，统一 Dashboard 与 Statistics 的日期来源。
+- 增加 Dashboard failure event 和 snackbar 反馈。
+- 增加 Statistics 聚合和页面展示。
+- 打磨 Dashboard 空状态与已打卡状态的基础视觉表现。
