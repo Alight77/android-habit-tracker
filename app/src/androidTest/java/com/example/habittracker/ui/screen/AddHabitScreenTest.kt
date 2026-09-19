@@ -2,6 +2,7 @@ package com.example.habittracker.ui.screen
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -78,6 +79,30 @@ class AddHabitScreenTest {
         assertEquals(
             "阅读",
             runBlocking { database.habitDao().getAllHabits().first().single().name }
+        )
+    }
+
+    @Test
+    fun saveHabit_withSelectedTarget_persistsTargetAndDisablesUpperBound() {
+        val backClickCount = AtomicInteger(0)
+        composeRule.setContent {
+            AddHabitScreen(
+                viewModel = viewModel(),
+                onBackClick = { backClickCount.incrementAndGet() }
+            )
+        }
+
+        composeRule.onNodeWithText("＋").assertIsNotEnabled()
+        repeat(2) { composeRule.onNodeWithText("−").performClick() }
+        composeRule.onNodeWithText("5 次 / 周").assertIsDisplayed()
+
+        composeRule.onNode(hasSetTextAction()).performTextInput("阅读")
+        composeRule.onNodeWithText("保存").performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
+
+        assertEquals(
+            5,
+            runBlocking { database.habitDao().getAllHabits().first().single().targetPerWeek }
         )
     }
 

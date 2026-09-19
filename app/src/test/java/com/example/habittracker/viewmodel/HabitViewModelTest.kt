@@ -48,16 +48,34 @@ class HabitViewModelTest {
         )
 
         viewModel.onNameChanged("  阅读  ")
+        repeat(2) { viewModel.decreaseTargetPerWeek() }
         viewModel.saveHabit()
         advanceUntilIdle()
 
         assertEquals("阅读", habitDao.insertedHabits.single().name)
+        assertEquals(5, habitDao.insertedHabits.single().targetPerWeek)
         val navigationRequestId = viewModel.uiState.value.navigateBackRequestId
         assertTrue(navigationRequestId != null)
 
         viewModel.onNavigateBackConsumed(navigationRequestId!!)
 
         assertEquals(AddHabitUiState(), viewModel.uiState.value)
+    }
+
+    @Test
+    fun targetPerWeek_isBoundedBetweenOneAndSeven() = runTest {
+        val viewModel = HabitViewModel(
+            repository = HabitRepository(RecordingHabitDao(), EmptyRecordDao()),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
+
+        assertEquals(7, viewModel.uiState.value.targetPerWeek)
+
+        repeat(10) { viewModel.decreaseTargetPerWeek() }
+        assertEquals(1, viewModel.uiState.value.targetPerWeek)
+
+        repeat(10) { viewModel.increaseTargetPerWeek() }
+        assertEquals(7, viewModel.uiState.value.targetPerWeek)
     }
 
     @Test

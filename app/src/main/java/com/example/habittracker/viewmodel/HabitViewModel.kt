@@ -16,8 +16,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+const val MIN_TARGET_PER_WEEK = 1
+const val MAX_TARGET_PER_WEEK = 7
+
 data class AddHabitUiState(
     val name: String = "",
+    val targetPerWeek: Int = MAX_TARGET_PER_WEEK,
     val nameError: String? = null,
     val isSaving: Boolean = false,
     val navigateBackRequestId: Long? = null
@@ -45,6 +49,18 @@ class HabitViewModel(
         }
     }
 
+    fun decreaseTargetPerWeek() {
+        _uiState.update { state ->
+            state.copy(targetPerWeek = (state.targetPerWeek - 1).coerceAtLeast(MIN_TARGET_PER_WEEK))
+        }
+    }
+
+    fun increaseTargetPerWeek() {
+        _uiState.update { state ->
+            state.copy(targetPerWeek = (state.targetPerWeek + 1).coerceAtMost(MAX_TARGET_PER_WEEK))
+        }
+    }
+
     fun saveHabit() {
         val state = _uiState.value
         val normalizedName = state.name.trim()
@@ -68,7 +84,7 @@ class HabitViewModel(
                     HabitEntity(
                         name = normalizedName,
                         description = "",
-                        targetPerWeek = 7,
+                        targetPerWeek = state.targetPerWeek,
                         createdAt = System.currentTimeMillis()
                     )
                 )

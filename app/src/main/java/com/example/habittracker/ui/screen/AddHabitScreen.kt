@@ -1,14 +1,8 @@
 package com.example.habittracker.ui.screen
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -17,13 +11,13 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.habittracker.ui.component.HabitFormContent
 import com.example.habittracker.viewmodel.AddHabitUiEvent
 import com.example.habittracker.viewmodel.HabitViewModel
 
@@ -67,35 +61,17 @@ fun AddHabitScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            OutlinedTextField(
-                value = uiState.name,
-                onValueChange = viewModel::onNameChanged,
-                label = { Text("习惯名称") },
-                isError = uiState.nameError != null,
-                supportingText = uiState.nameError?.let { message ->
-                    { Text(message) }
-                }
+            HabitFormContent(
+                name = uiState.name,
+                targetPerWeek = uiState.targetPerWeek,
+                nameError = uiState.nameError,
+                isSaving = uiState.isSaving,
+                onNameChanged = viewModel::onNameChanged,
+                onDecreaseTarget = viewModel::decreaseTargetPerWeek,
+                onIncreaseTarget = viewModel::increaseTargetPerWeek,
+                onSave = viewModel::saveHabit,
+                saveLabel = "保存"
             )
-
-            Spacer(modifier = Modifier.padding(16.dp))
-
-            Button(
-                onClick = viewModel::saveHabit,
-                enabled = !uiState.isSaving
-            ) {
-                if (uiState.isSaving) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.size(8.dp))
-                        Text("保存中…")
-                    }
-                } else {
-                    Text("保存")
-                }
-            }
         }
     }
 }
