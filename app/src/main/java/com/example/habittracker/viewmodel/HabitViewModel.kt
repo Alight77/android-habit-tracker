@@ -19,12 +19,11 @@ import kotlinx.coroutines.launch
 data class AddHabitUiState(
     val name: String = "",
     val nameError: String? = null,
-    val isSaving: Boolean = false
+    val isSaving: Boolean = false,
+    val navigateBackRequestId: Long? = null
 )
 
 sealed interface AddHabitUiEvent {
-    data object Saved : AddHabitUiEvent
-
     data class SaveFailed(val message: String) : AddHabitUiEvent
 }
 
@@ -35,6 +34,7 @@ class HabitViewModel(
 
     private val _uiState = MutableStateFlow(AddHabitUiState())
     private val _events = MutableSharedFlow<AddHabitUiEvent>(extraBufferCapacity = 1)
+    private var nextNavigationRequestId = 0L
 
     val uiState: StateFlow<AddHabitUiState> = _uiState.asStateFlow()
     val events: SharedFlow<AddHabitUiEvent> = _events.asSharedFlow()
@@ -72,8 +72,9 @@ class HabitViewModel(
                         createdAt = System.currentTimeMillis()
                     )
                 )
-                _uiState.value = AddHabitUiState()
-                _events.emit(AddHabitUiEvent.Saved)
+                _uiState.value = AddHabitUiState(
+                    navigateBackRequestId = ++nextNavigationRequestId
+                )
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
 
@@ -81,6 +82,16 @@ class HabitViewModel(
                     currentState.copy(isSaving = false)
                 }
                 _events.emit(AddHabitUiEvent.SaveFailed("保存失败，请稍后重试"))
+            }
+        }
+    }
+
+    fun onNavigateBackConsumed(requestId: Long) {
+        _uiState.update { state ->
+            if (state.navigateBackRequestId == requestId) {
+                state.copy(navigateBackRequestId = null)
+            } else {
+                state
             }
         }
     }

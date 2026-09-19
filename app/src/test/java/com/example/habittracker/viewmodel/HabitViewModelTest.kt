@@ -40,25 +40,24 @@ class HabitViewModelTest {
     }
 
     @Test
-    fun saveHabit_withValidName_trimsNameWritesHabitAndEmitsSaved() = runTest {
+    fun saveHabit_withValidName_keepsNavigateBackRequestUntilItIsConsumed() = runTest {
         val habitDao = RecordingHabitDao()
         val viewModel = HabitViewModel(
             repository = HabitRepository(habitDao, EmptyRecordDao()),
             dispatcher = StandardTestDispatcher(testScheduler)
         )
-        val events = mutableListOf<AddHabitUiEvent>()
-        val collectEvents = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.events.toList(events)
-        }
 
         viewModel.onNameChanged("  阅读  ")
         viewModel.saveHabit()
         advanceUntilIdle()
 
         assertEquals("阅读", habitDao.insertedHabits.single().name)
+        val navigationRequestId = viewModel.uiState.value.navigateBackRequestId
+        assertTrue(navigationRequestId != null)
+
+        viewModel.onNavigateBackConsumed(navigationRequestId!!)
+
         assertEquals(AddHabitUiState(), viewModel.uiState.value)
-        assertEquals(listOf(AddHabitUiEvent.Saved), events)
-        collectEvents.cancel()
     }
 
     @Test

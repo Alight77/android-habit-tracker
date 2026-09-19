@@ -26,7 +26,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.habittracker.ui.component.HabitCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,11 +41,14 @@ fun DashboardScreen(
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
     val snackbarHostState = remember { SnackbarHostState() }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(viewModel) {
-        viewModel.events.collect { event ->
-            when (event) {
-                is DashboardUiEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
+    LaunchedEffect(viewModel, lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.events.collect { event ->
+                when (event) {
+                    is DashboardUiEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
+                }
             }
         }
     }
