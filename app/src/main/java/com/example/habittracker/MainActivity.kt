@@ -31,7 +31,6 @@ class MainActivity : ComponentActivity() {
             HabitDatabase::class.java,
             "habits.db"
         )
-            .fallbackToDestructiveMigration()
             .build()
 
         val repository = HabitRepository(
