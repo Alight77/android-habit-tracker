@@ -3,7 +3,7 @@ package com.example.habittracker.feature.stats
 import com.example.habittracker.data.local.HabitEntity
 import com.example.habittracker.data.local.RecordEntity
 import com.example.habittracker.domain.usecase.calculateStreak
-import com.example.habittracker.domain.usecase.epochMillisToLocalDate
+import com.example.habittracker.domain.usecase.epochDayToLocalDate
 import java.time.LocalDate
 import kotlin.math.roundToInt
 
@@ -25,7 +25,7 @@ fun calculateStats(
         record.isDone && record.habitId in habitIds
     }
     val doneRecordsWithDates = doneRecords.map { record ->
-        record to epochMillisToLocalDate(record.date)
+        record to epochDayToLocalDate(record.date)
     }
 
     val todayDoneCount = doneRecordsWithDates

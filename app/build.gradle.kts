@@ -37,6 +37,11 @@ android {
     buildFeatures {
         compose = true
     }
+    sourceSets {
+        getByName("androidTest") {
+            assets.directories.add("$projectDir/schemas")
+        }
+    }
 }
 
 ksp {
@@ -63,6 +68,7 @@ dependencies {
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
+    androidTestImplementation("androidx.room:room-testing:$roomVersion")
     implementation("androidx.navigation:navigation-compose:2.7.7")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
 

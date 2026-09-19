@@ -5,7 +5,7 @@ import com.example.habittracker.data.local.HabitEntity
 import com.example.habittracker.data.local.RecordDao
 import com.example.habittracker.data.local.RecordEntity
 import com.example.habittracker.domain.usecase.calculateStreak
-import com.example.habittracker.domain.usecase.epochMillisToLocalDate
+import com.example.habittracker.domain.usecase.epochDayToLocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -28,12 +28,12 @@ class HabitRepository(
         habitDao.deleteHabit(habit)
     }
 
-    suspend fun setTodayRecordChecked(habitId: Int, date: Long, targetChecked: Boolean) {
-        recordDao.setRecordChecked(habitId, date, targetChecked)
+    suspend fun setTodayRecordChecked(habitId: Int, epochDay: Long, targetChecked: Boolean) {
+        recordDao.setRecordChecked(habitId, epochDay, targetChecked)
     }
 
-    fun observeTodayRecord(habitId: Int, today: Long): Flow<Boolean> {
-        return recordDao.observeRecordByDate(habitId, today)
+    fun observeTodayRecord(habitId: Int, epochDay: Long): Flow<Boolean> {
+        return recordDao.observeRecordByDate(habitId, epochDay)
             .map { record -> record?.isDone == true }
             .distinctUntilChanged()
     }
@@ -45,7 +45,7 @@ class HabitRepository(
     fun observeStreak(habitId: Int, today: LocalDate): Flow<Int> {
         return recordDao.getDoneRecord(habitId)
             .map { records ->
-                val dates = records.map { record -> epochMillisToLocalDate(record.date) }
+                val dates = records.map { record -> epochDayToLocalDate(record.date) }
                 calculateStreak(dates, today)
             }
             .distinctUntilChanged()

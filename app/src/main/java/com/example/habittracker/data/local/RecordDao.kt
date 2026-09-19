@@ -21,14 +21,14 @@ interface RecordDao {
     suspend fun updateRecord(record: RecordEntity)
 
     @Transaction
-    suspend fun setRecordChecked(habitId: Int, date: Long, targetChecked: Boolean) {
-        val record = getRecordByDate(habitId, date)
+    suspend fun setRecordChecked(habitId: Int, epochDay: Long, targetChecked: Boolean) {
+        val record = getRecordByDate(habitId, epochDay)
 
         if (record == null) {
             insertRecord(
                 RecordEntity(
                     habitId = habitId,
-                    date = date,
+                    date = epochDay,
                     isDone = targetChecked
                 )
             )
@@ -40,10 +40,10 @@ interface RecordDao {
     @Query(
         """
         SELECT * FROM records
-        WHERE habitId = :habitId AND date = :date
+        WHERE habitId = :habitId AND date = :epochDay
     """
     )
-    suspend fun getRecordByDate(habitId: Int, date: Long): RecordEntity?
+    suspend fun getRecordByDate(habitId: Int, epochDay: Long): RecordEntity?
 
     @Query(
         """
@@ -59,10 +59,10 @@ interface RecordDao {
     @Query(
         """
         SELECT * FROM records
-        WHERE habitId = :habitId AND date = :date
+        WHERE habitId = :habitId AND date = :epochDay
     """
     )
-    fun observeRecordByDate(habitId: Int, date: Long): Flow<RecordEntity?>
+    fun observeRecordByDate(habitId: Int, epochDay: Long): Flow<RecordEntity?>
 
     @Query(
         """

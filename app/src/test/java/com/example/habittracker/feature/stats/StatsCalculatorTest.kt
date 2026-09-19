@@ -5,7 +5,6 @@ import com.example.habittracker.data.local.RecordEntity
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
-import java.time.ZoneId
 
 class StatsCalculatorTest {
 
@@ -96,7 +95,7 @@ class StatsCalculatorTest {
     private fun doneRecord(habitId: Int, date: LocalDate): RecordEntity {
         return RecordEntity(
             habitId = habitId,
-            date = dateMillis(date),
+            date = date.toEpochDay(),
             isDone = true
         )
     }
@@ -104,15 +103,8 @@ class StatsCalculatorTest {
     private fun skippedRecord(habitId: Int, date: LocalDate): RecordEntity {
         return RecordEntity(
             habitId = habitId,
-            date = dateMillis(date),
+            date = date.toEpochDay(),
             isDone = false
         )
-    }
-
-    private fun dateMillis(date: LocalDate): Long {
-        return date
-            .atStartOfDay(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
     }
 }

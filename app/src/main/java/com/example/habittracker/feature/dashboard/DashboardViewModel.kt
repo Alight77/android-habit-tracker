@@ -6,7 +6,7 @@ import com.example.habittracker.data.local.HabitDao
 import com.example.habittracker.data.local.RecordDao
 import com.example.habittracker.domain.usecase.calculateStreak
 import com.example.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
-import com.example.habittracker.domain.usecase.epochMillisToLocalDate
+import com.example.habittracker.domain.usecase.epochDayToLocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -110,10 +110,10 @@ class DashboardViewModel(
                 val recordsForHabit = recordsByHabitId[habit.id] ?: emptyList()
                 val doneRecordsForHabit = recordsForHabit.filter { it.isDone }
                 val dbDoneToday = recordsForHabit.any { record ->
-                    epochMillisToLocalDate(record.date) == today && record.isDone
+                    epochDayToLocalDate(record.date) == today && record.isDone
                 }
                 val mergedDoneToday = optimistic[habit.id] ?: dbDoneToday
-                val dates = doneRecordsForHabit.map { record -> epochMillisToLocalDate(record.date) }
+                val dates = doneRecordsForHabit.map { record -> epochDayToLocalDate(record.date) }
                 val streak = calculateStreak(dates, today)
 
                 HabitItemUiState(habit.id, habit.name, habit.targetPerWeek, mergedDoneToday, streak)

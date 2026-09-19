@@ -12,6 +12,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import com.example.habittracker.data.local.HabitDatabase
+import com.example.habittracker.data.local.HabitDatabaseMigrations
 import com.example.habittracker.data.repository.HabitRepository
 import com.example.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 import com.example.habittracker.feature.dashboard.DashboardViewModel
@@ -20,7 +21,6 @@ import com.example.habittracker.ui.navigation.HabitNavHost
 import com.example.habittracker.ui.theme.HabitTrackerTheme
 import com.example.habittracker.viewmodel.HabitViewModel
 import kotlinx.coroutines.flow.map
-import java.time.ZoneId
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
             HabitDatabase::class.java,
             "habits.db"
         )
+            .addMigrations(HabitDatabaseMigrations.MIGRATION_2_3)
             .build()
 
         val repository = HabitRepository(
@@ -40,27 +41,21 @@ class MainActivity : ComponentActivity() {
 
         val setTodayHabitCheckedUseCase = SetTodayHabitCheckedUseCase(
             applyCommand = { command ->
-                val todayMillis = command.today
-                    .atStartOfDay(ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli()
+                val epochDay = command.today.toEpochDay()
 
                 repository.setTodayRecordChecked(
                     habitId = command.habitId,
-                    date = todayMillis,
+                    epochDay = epochDay,
                     targetChecked = command.targetChecked
                 )
 
                 SetTodayHabitCheckedUseCase.ApplyResult.Accepted
             },
             observeSourceChecked = { command ->
-                val todayMillis = command.today
-                    .atStartOfDay(ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli()
+                val epochDay = command.today.toEpochDay()
 
                 db.recordDao()
-                    .observeRecordByDate(command.habitId, todayMillis)
+                    .observeRecordByDate(command.habitId, epochDay)
                     .map { record -> record?.isDone == true }
             }
         )
