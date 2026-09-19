@@ -55,6 +55,49 @@ class HabitDatabaseDaoTest {
         assertEquals(false, records.single().isDone)
     }
 
+    @Test
+    fun updateHabit_updatesEditableFieldsAndKeepsExistingFields() = runBlocking {
+        database.habitDao().insertHabit(
+            HabitEntity(
+                name = "阅读",
+                description = "保留的描述",
+                targetPerWeek = 3,
+                createdAt = 12L
+            )
+        )
+        val existingHabit = database.habitDao().getAllHabits().first().single()
+
+        database.habitDao().updateHabit(
+            existingHabit.copy(
+                name = "晨读",
+                targetPerWeek = 5
+            )
+        )
+
+        assertEquals(
+            HabitEntity(
+                id = existingHabit.id,
+                name = "晨读",
+                description = "保留的描述",
+                targetPerWeek = 5,
+                createdAt = 12L
+            ),
+            database.habitDao().getHabitById(existingHabit.id)
+        )
+    }
+
+    @Test
+    fun deleteHabitById_removesItsRecordsThroughForeignKeyCascade() = runBlocking {
+        database.habitDao().insertHabit(habit(name = "阅读", createdAt = 1))
+        val habitId = database.habitDao().getAllHabits().first().single().id
+        database.recordDao().setRecordChecked(habitId, epochDay = 20_000L, targetChecked = true)
+
+        database.habitDao().deleteHabitById(habitId)
+
+        assertEquals(null, database.habitDao().getHabitById(habitId))
+        assertEquals(emptyList<Any>(), database.recordDao().getRecordsForHabitId(habitId).first())
+    }
+
     private fun habit(name: String, createdAt: Long): HabitEntity {
         return HabitEntity(
             name = name,

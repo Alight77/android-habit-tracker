@@ -1,7 +1,9 @@
 package com.example.habittracker.feature.dashboard
 
 import com.example.habittracker.data.local.HabitEntity
+import com.example.habittracker.data.local.HabitDao
 import com.example.habittracker.data.local.RecordEntity
+import com.example.habittracker.data.repository.HabitRepository
 import com.example.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 import com.example.habittracker.testutil.MainDispatcherRule
 import com.example.habittracker.testutil.TestHabitDao
@@ -31,14 +33,17 @@ class DashboardViewModelTest {
     @Test
     fun uiState_mapsTodayCompletionAndStreakFromDaoFlows() = runTest {
         val today = LocalDate.of(2026, 9, 19)
+        val habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读")))
+        val recordDao = TestRecordDao(
+            listOf(
+                record(habitId = 1, date = today, isDone = true),
+                record(habitId = 1, date = today.minusDays(1), isDone = true)
+            )
+        )
         val viewModel = DashboardViewModel(
-            habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读"))),
-            recordDao = TestRecordDao(
-                listOf(
-                    record(habitId = 1, date = today, isDone = true),
-                    record(habitId = 1, date = today.minusDays(1), isDone = true)
-                )
-            ),
+            habitDao = habitDao,
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
             setTodayHabitChecked = acceptedUseCase(),
             todaySource = flowOf(today)
         )
@@ -62,6 +67,8 @@ class DashboardViewModelTest {
     @Test
     fun onHabitChecked_whenUseCaseRejects_emitsFailureMessage() = runTest {
         val today = LocalDate.of(2026, 9, 19)
+        val habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读")))
+        val recordDao = TestRecordDao(emptyList())
         val useCase = SetTodayHabitCheckedUseCase(
             applyCommand = {
                 SetTodayHabitCheckedUseCase.ApplyResult.Rejected(
@@ -72,8 +79,9 @@ class DashboardViewModelTest {
             dispatcher = mainDispatcherRule.dispatcher
         )
         val viewModel = DashboardViewModel(
-            habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读"))),
-            recordDao = TestRecordDao(emptyList()),
+            habitDao = habitDao,
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
             setTodayHabitChecked = useCase,
             todaySource = flowOf(today)
         )
@@ -90,12 +98,37 @@ class DashboardViewModelTest {
     }
 
     @Test
+    fun deleteHabit_whenDaoFails_emitsFailureMessage() = runTest {
+        val habitDao = ThrowingDeleteHabitDao()
+        val recordDao = TestRecordDao(emptyList())
+        val viewModel = DashboardViewModel(
+            habitDao = habitDao,
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
+            setTodayHabitChecked = acceptedUseCase(),
+            todaySource = flowOf(LocalDate.of(2026, 9, 19))
+        )
+        val event = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeout(2_000L) { viewModel.events.take(1).toList().single() }
+        }
+
+        viewModel.deleteHabit(7)
+
+        assertEquals(
+            DashboardUiEvent.ShowMessage("删除习惯失败，请稍后重试"),
+            event.await()
+        )
+    }
+
+    @Test
     fun retry_afterHabitFlowFails_resubscribesAndEmitsSuccess() = runTest {
         val today = LocalDate.of(2026, 9, 19)
         val habitDao = ThrowOnceHabitDao(listOf(habit(id = 1, name = "阅读")))
+        val recordDao = TestRecordDao(emptyList())
         val viewModel = DashboardViewModel(
             habitDao = habitDao,
-            recordDao = TestRecordDao(emptyList()),
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
             setTodayHabitChecked = acceptedUseCase(),
             todaySource = flowOf(today)
         )
@@ -140,5 +173,18 @@ class DashboardViewModelTest {
             date = date.toEpochDay(),
             isDone = isDone
         )
+    }
+
+    private class ThrowingDeleteHabitDao : HabitDao {
+        override suspend fun insertHabit(habit: HabitEntity) = Unit
+        override suspend fun deleteHabit(habit: HabitEntity) = Unit
+        override suspend fun getHabitById(habitId: Int): HabitEntity? = null
+        override suspend fun updateHabit(habit: HabitEntity) = Unit
+
+        override suspend fun deleteHabitById(habitId: Int) {
+            error("database unavailable")
+        }
+
+        override fun getAllHabits() = flowOf(emptyList<HabitEntity>())
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
 import androidx.compose.material3.FloatingActionButton
@@ -20,7 +21,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -37,7 +41,8 @@ import com.example.habittracker.ui.component.HabitCard
 fun DashboardScreen(
     viewModel: DashboardViewModel,
     onAddClick: () -> Unit,
-    onStatsClick: () -> Unit
+    onStatsClick: () -> Unit,
+    onEditClick: (Int) -> Unit
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
     val snackbarHostState = remember { SnackbarHostState() }
@@ -61,6 +66,8 @@ fun DashboardScreen(
         },
         onAddClick = onAddClick,
         onStatsClick = onStatsClick,
+        onEditClick = onEditClick,
+        onDeleteHabit = viewModel::deleteHabit,
         onRetry = viewModel::retry
     )
 }
@@ -73,6 +80,8 @@ private fun DashboardScaffold(
     onCheckClick: (Int, Boolean) -> Unit,
     onAddClick: () -> Unit,
     onStatsClick: () -> Unit,
+    onEditClick: (Int) -> Unit,
+    onDeleteHabit: (Int) -> Unit,
     onRetry: () -> Unit
 ) {
     Scaffold(
@@ -101,6 +110,8 @@ private fun DashboardScaffold(
         DashboardBody(
             uiState = uiState,
             onCheckClick = onCheckClick,
+            onEditClick = onEditClick,
+            onDeleteHabit = onDeleteHabit,
             onRetry = onRetry,
             modifier = Modifier.padding(padding)
         )
@@ -113,6 +124,8 @@ fun DashboardContent(
     onCheckClick: (Int, Boolean) -> Unit,
     onAddClick: () -> Unit,
     onStatsClick: () -> Unit,
+    onEditClick: (Int) -> Unit,
+    onDeleteHabit: (Int) -> Unit,
     onRetry: () -> Unit
 ) {
     DashboardScaffold(
@@ -121,6 +134,8 @@ fun DashboardContent(
         onCheckClick = onCheckClick,
         onAddClick = onAddClick,
         onStatsClick = onStatsClick,
+        onEditClick = onEditClick,
+        onDeleteHabit = onDeleteHabit,
         onRetry = onRetry
     )
 }
@@ -129,9 +144,13 @@ fun DashboardContent(
 private fun DashboardBody(
     uiState: DashboardUiState,
     onCheckClick: (Int, Boolean) -> Unit,
+    onEditClick: (Int) -> Unit,
+    onDeleteHabit: (Int) -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var habitPendingDeletion by remember { mutableStateOf<HabitItemUiState?>(null) }
+
     when (uiState) {
         DashboardUiState.Loading -> {
             Box(
@@ -170,12 +189,37 @@ private fun DashboardBody(
                     ) { item ->
                         HabitCard(
                             habit = item,
-                            onCheckClick = { onCheckClick(item.id, !item.isDoneToday) }
+                            onCheckClick = { onCheckClick(item.id, !item.isDoneToday) },
+                            onEditClick = { onEditClick(item.id) },
+                            onDeleteClick = { habitPendingDeletion = item }
                         )
                     }
                 }
             }
         }
+    }
+
+    habitPendingDeletion?.let { habit ->
+        AlertDialog(
+            onDismissRequest = { habitPendingDeletion = null },
+            title = { Text("删除习惯") },
+            text = { Text("确定删除“${habit.name}”吗？") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        habitPendingDeletion = null
+                        onDeleteHabit(habit.id)
+                    }
+                ) {
+                    Text("确认")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { habitPendingDeletion = null }) {
+                    Text("取消")
+                }
+            }
+        )
     }
 }
 
@@ -225,6 +269,8 @@ fun DashboardContentSuccessPreview() {
         onCheckClick = { _, _ -> },
         onAddClick = {},
         onStatsClick = {},
+        onEditClick = {},
+        onDeleteHabit = {},
         onRetry = {}
     )
 }
@@ -237,6 +283,8 @@ fun DashboardContentEmptyPreview() {
         onCheckClick = { _, _ -> },
         onAddClick = {},
         onStatsClick = {},
+        onEditClick = {},
+        onDeleteHabit = {},
         onRetry = {}
     )
 }
@@ -249,6 +297,8 @@ fun DashboardContentLoadingPreview() {
         onCheckClick = { _, _ -> },
         onAddClick = {},
         onStatsClick = {},
+        onEditClick = {},
+        onDeleteHabit = {},
         onRetry = {}
     )
 }
@@ -261,6 +311,8 @@ fun DashboardContentErrorPreview() {
         onCheckClick = { _, _ -> },
         onAddClick = {},
         onStatsClick = {},
+        onEditClick = {},
+        onDeleteHabit = {},
         onRetry = {}
     )
 }

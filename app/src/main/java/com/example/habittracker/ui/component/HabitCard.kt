@@ -17,10 +17,16 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -34,8 +40,11 @@ import com.example.habittracker.ui.theme.HabitTrackerTheme
 @Composable
 fun HabitCard(
     habit: HabitItemUiState,
-    onCheckClick: () -> Unit
+    onCheckClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
+    var moreMenuExpanded by remember { mutableStateOf(false) }
     val cardContainerColor by animateColorAsState(
         targetValue = if (habit.isDoneToday) {
             MaterialTheme.colorScheme.secondaryContainer
@@ -114,6 +123,31 @@ fun HabitCard(
                     Text(text = "✓")
                 }
             }
+
+            Box {
+                IconButton(onClick = { moreMenuExpanded = true }) {
+                    Text("⋮")
+                }
+                DropdownMenu(
+                    expanded = moreMenuExpanded,
+                    onDismissRequest = { moreMenuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("编辑") },
+                        onClick = {
+                            moreMenuExpanded = false
+                            onEditClick()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("删除") },
+                        onClick = {
+                            moreMenuExpanded = false
+                            onDeleteClick()
+                        }
+                    )
+                }
+            }
         }
     }
 }
@@ -130,7 +164,9 @@ fun HabitCardPreview() {
                 isDoneToday = true,
                 streak = 1
             ),
-            onCheckClick = {}
+            onCheckClick = {},
+            onEditClick = {},
+            onDeleteClick = {}
         )
     }
 }

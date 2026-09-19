@@ -81,7 +81,8 @@ class MainActivity : ComponentActivity() {
                 navController = navController,
                 dashboardViewModel = dashboardViewModel,
                 addHabitViewModel = addHabitViewModel,
-                statsViewModel = statsViewModel
+                statsViewModel = statsViewModel,
+                repository = repository
             )
         }
     }

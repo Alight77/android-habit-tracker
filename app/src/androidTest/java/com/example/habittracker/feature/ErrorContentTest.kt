@@ -30,6 +30,8 @@ class ErrorContentTest {
                 onCheckClick = { _, _ -> },
                 onAddClick = {},
                 onStatsClick = {},
+                onEditClick = {},
+                onDeleteHabit = {},
                 onRetry = { retryCount.incrementAndGet() }
             )
         }

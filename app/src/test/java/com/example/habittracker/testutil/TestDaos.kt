@@ -20,6 +20,20 @@ class TestHabitDao(initialHabits: List<HabitEntity>) : HabitDao {
         habits.value = habits.value.filterNot { it.id == habit.id }
     }
 
+    override suspend fun getHabitById(habitId: Int): HabitEntity? {
+        return habits.value.firstOrNull { it.id == habitId }
+    }
+
+    override suspend fun updateHabit(habit: HabitEntity) {
+        habits.value = habits.value.map { existing ->
+            if (existing.id == habit.id) habit else existing
+        }
+    }
+
+    override suspend fun deleteHabitById(habitId: Int) {
+        habits.value = habits.value.filterNot { it.id == habitId }
+    }
+
     override fun getAllHabits(): Flow<List<HabitEntity>> = habits
 }
 
@@ -34,6 +48,12 @@ class ThrowOnceHabitDao(
     override suspend fun insertHabit(habit: HabitEntity) = Unit
 
     override suspend fun deleteHabit(habit: HabitEntity) = Unit
+
+    override suspend fun getHabitById(habitId: Int): HabitEntity? = null
+
+    override suspend fun updateHabit(habit: HabitEntity) = Unit
+
+    override suspend fun deleteHabitById(habitId: Int) = Unit
 
     override fun getAllHabits(): Flow<List<HabitEntity>> = flow {
         subscriptionCount += 1

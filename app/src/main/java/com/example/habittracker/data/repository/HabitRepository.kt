@@ -24,8 +24,20 @@ class HabitRepository(
         habitDao.insertHabit(habit)
     }
 
+    suspend fun getHabitById(habitId: Int): HabitEntity? {
+        return habitDao.getHabitById(habitId)
+    }
+
+    suspend fun updateHabit(habit: HabitEntity) {
+        habitDao.updateHabit(habit)
+    }
+
     suspend fun deleteHabit(habit: HabitEntity) {
         habitDao.deleteHabit(habit)
+    }
+
+    suspend fun deleteHabitById(habitId: Int) {
+        habitDao.deleteHabitById(habitId)
     }
 
     suspend fun setTodayRecordChecked(habitId: Int, epochDay: Long, targetChecked: Boolean) {

@@ -111,6 +111,12 @@ class HabitViewModelTest {
 
         override suspend fun deleteHabit(habit: HabitEntity) = Unit
 
+        override suspend fun getHabitById(habitId: Int): HabitEntity? = null
+
+        override suspend fun updateHabit(habit: HabitEntity) = Unit
+
+        override suspend fun deleteHabitById(habitId: Int) = Unit
+
         override fun getAllHabits(): Flow<List<HabitEntity>> = flowOf(emptyList())
     }
 
@@ -120,6 +126,12 @@ class HabitViewModelTest {
         }
 
         override suspend fun deleteHabit(habit: HabitEntity) = Unit
+
+        override suspend fun getHabitById(habitId: Int): HabitEntity? = null
+
+        override suspend fun updateHabit(habit: HabitEntity) = Unit
+
+        override suspend fun deleteHabitById(habitId: Int) = Unit
 
         override fun getAllHabits(): Flow<List<HabitEntity>> = flowOf(emptyList())
     }

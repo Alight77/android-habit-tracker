@@ -28,6 +28,7 @@ class HabitTrackerViewModelFactory(
                 DashboardViewModel(
                     habitDao = habitDao,
                     recordDao = recordDao,
+                    repository = repository,
                     setTodayHabitChecked = setTodayHabitChecked
                 )
             }

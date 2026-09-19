@@ -14,6 +14,28 @@ import java.time.LocalDate
 class HabitRepositoryTest {
 
     @Test
+    fun editOperations_delegateToHabitDao() = runBlocking {
+        val habit = HabitEntity(
+            id = 7,
+            name = "阅读",
+            description = "",
+            targetPerWeek = 3,
+            createdAt = 10L
+        )
+        val habitDao = RecordingHabitDao(habit)
+        val repository = HabitRepository(habitDao, RecordingRecordDao())
+
+        assertEquals(habit, repository.getHabitById(7))
+
+        val updatedHabit = habit.copy(name = "晨读", targetPerWeek = 5)
+        repository.updateHabit(updatedHabit)
+        repository.deleteHabitById(7)
+
+        assertEquals(updatedHabit, habitDao.updatedHabit)
+        assertEquals(listOf(7), habitDao.deletedHabitIds)
+    }
+
+    @Test
     fun setTodayRecordChecked_delegatesToDaoTransactionEntryPoint() = runBlocking {
         val recordDao = RecordingRecordDao()
         val repository = HabitRepository(
@@ -42,6 +64,29 @@ class HabitRepositoryTest {
     private class EmptyHabitDao : HabitDao {
         override suspend fun insertHabit(habit: HabitEntity) = Unit
         override suspend fun deleteHabit(habit: HabitEntity) = Unit
+        override suspend fun getHabitById(habitId: Int): HabitEntity? = null
+        override suspend fun updateHabit(habit: HabitEntity) = Unit
+        override suspend fun deleteHabitById(habitId: Int) = Unit
+        override fun getAllHabits(): Flow<List<HabitEntity>> = flowOf(emptyList())
+    }
+
+    private class RecordingHabitDao(
+        private val habit: HabitEntity
+    ) : HabitDao {
+        var updatedHabit: HabitEntity? = null
+        val deletedHabitIds = mutableListOf<Int>()
+
+        override suspend fun insertHabit(habit: HabitEntity) = Unit
+        override suspend fun deleteHabit(habit: HabitEntity) = Unit
+        override suspend fun getHabitById(habitId: Int): HabitEntity? = habit.takeIf { it.id == habitId }
+        override suspend fun updateHabit(habit: HabitEntity) {
+            updatedHabit = habit
+        }
+
+        override suspend fun deleteHabitById(habitId: Int) {
+            deletedHabitIds += habitId
+        }
+
         override fun getAllHabits(): Flow<List<HabitEntity>> = flowOf(emptyList())
     }
 

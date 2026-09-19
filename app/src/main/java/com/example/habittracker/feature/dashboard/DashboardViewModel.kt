@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.habittracker.data.local.HabitDao
 import com.example.habittracker.data.local.RecordDao
+import com.example.habittracker.data.repository.HabitRepository
 import com.example.habittracker.domain.usecase.calculateStreak
 import com.example.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 import com.example.habittracker.domain.usecase.epochDayToLocalDate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -26,6 +28,7 @@ import java.time.LocalDate
 class DashboardViewModel(
     private val habitDao: HabitDao,
     private val recordDao: RecordDao,
+    private val repository: HabitRepository,
     private val setTodayHabitChecked: SetTodayHabitCheckedUseCase,
     todaySource: Flow<LocalDate> = systemTodayFlow()
 ) : ViewModel() {
@@ -100,6 +103,17 @@ class DashboardViewModel(
                     today = today
                 )
             )
+        }
+    }
+
+    fun deleteHabit(habitId: Int) {
+        viewModelScope.launch {
+            try {
+                repository.deleteHabitById(habitId)
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                _events.emit(DashboardUiEvent.ShowMessage("删除习惯失败，请稍后重试"))
+            }
         }
     }
 
