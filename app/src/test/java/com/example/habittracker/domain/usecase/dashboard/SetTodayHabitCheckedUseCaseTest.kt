@@ -156,6 +156,141 @@ class SetTodayHabitCheckedUseCaseTest {
     }
 
     @Test
+    fun invoke_whenPendingCommandCrossesMidnight_persistsLatestCommandDate() = runBlocking {
+        val sourceChecked = MutableStateFlow(false)
+        val firstApplyCanFinish = CompletableDeferred<Unit>()
+        val firstApplyStarted = CompletableDeferred<Unit>()
+        val appliedCommands = mutableListOf<SetTodayHabitCheckedUseCase.Command>()
+        val nextDay = today.plusDays(1)
+        val useCase = SetTodayHabitCheckedUseCase(
+            applyCommand = { command ->
+                appliedCommands += command
+                if (appliedCommands.size == 1) {
+                    firstApplyStarted.complete(Unit)
+                    firstApplyCanFinish.await()
+                }
+                sourceChecked.value = command.targetChecked
+                SetTodayHabitCheckedUseCase.ApplyResult.Accepted
+            },
+            observeSourceChecked = { sourceChecked },
+            dispatcher = Dispatchers.Unconfined
+        )
+        val events = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeout(2_000L) { useCase.events.take(3).toList() }
+        }
+        val firstCommand = async(start = CoroutineStart.UNDISPATCHED) {
+            useCase(command(targetChecked = true))
+        }
+        firstApplyStarted.await()
+
+        val latestCommand = command(targetChecked = false, date = nextDay)
+        useCase(latestCommand)
+        firstApplyCanFinish.complete(Unit)
+        firstCommand.await()
+
+        assertEquals(listOf(command(targetChecked = true), latestCommand), appliedCommands)
+        assertEquals(
+            listOf(
+                SetTodayHabitCheckedUseCase.DomainEvent.OptimisticApplied(1, true, today),
+                SetTodayHabitCheckedUseCase.DomainEvent.Superseded(1, true, false, nextDay),
+                SetTodayHabitCheckedUseCase.DomainEvent.Confirmed(1, false, nextDay)
+            ),
+            events.await()
+        )
+    }
+
+    @Test
+    fun invoke_whenLatestPendingCommandTimesOut_emitsRevertedWithLatestDate() = runBlocking {
+        val firstApplyCanFinish = CompletableDeferred<Unit>()
+        val firstApplyStarted = CompletableDeferred<Unit>()
+        val appliedCommands = mutableListOf<SetTodayHabitCheckedUseCase.Command>()
+        val nextDay = today.plusDays(1)
+        val useCase = SetTodayHabitCheckedUseCase(
+            applyCommand = { command ->
+                appliedCommands += command
+                if (appliedCommands.size == 1) {
+                    firstApplyStarted.complete(Unit)
+                    firstApplyCanFinish.await()
+                }
+                SetTodayHabitCheckedUseCase.ApplyResult.Accepted
+            },
+            observeSourceChecked = { flowOf(true) },
+            dispatcher = Dispatchers.Unconfined,
+            confirmationTimeoutMillis = 10L
+        )
+        val events = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeout(2_000L) { useCase.events.take(3).toList() }
+        }
+        val firstCommand = async(start = CoroutineStart.UNDISPATCHED) {
+            useCase(command(targetChecked = true))
+        }
+        firstApplyStarted.await()
+
+        val latestCommand = command(targetChecked = false, date = nextDay)
+        useCase(latestCommand)
+        firstApplyCanFinish.complete(Unit)
+        firstCommand.await()
+
+        assertEquals(listOf(command(targetChecked = true), latestCommand), appliedCommands)
+        assertEquals(
+            SetTodayHabitCheckedUseCase.DomainEvent.Reverted(
+                habitId = 1,
+                failedTargetChecked = false,
+                today = nextDay,
+                reason = SetTodayHabitCheckedUseCase.RollbackReason.CONVERGENCE_TIMEOUT
+            ),
+            events.await().last()
+        )
+    }
+
+    @Test
+    fun invoke_whenLatestPendingCommandPersistenceFails_emitsRevertedWithLatestDate() = runBlocking {
+        val sourceChecked = MutableStateFlow(false)
+        val firstApplyCanFinish = CompletableDeferred<Unit>()
+        val firstApplyStarted = CompletableDeferred<Unit>()
+        val appliedCommands = mutableListOf<SetTodayHabitCheckedUseCase.Command>()
+        val nextDay = today.plusDays(1)
+        val useCase = SetTodayHabitCheckedUseCase(
+            applyCommand = { command ->
+                appliedCommands += command
+                if (appliedCommands.size == 1) {
+                    firstApplyStarted.complete(Unit)
+                    firstApplyCanFinish.await()
+                    sourceChecked.value = command.targetChecked
+                    SetTodayHabitCheckedUseCase.ApplyResult.Accepted
+                } else {
+                    error("database unavailable")
+                }
+            },
+            observeSourceChecked = { sourceChecked },
+            dispatcher = Dispatchers.Unconfined
+        )
+        val events = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeout(2_000L) { useCase.events.take(3).toList() }
+        }
+        val firstCommand = async(start = CoroutineStart.UNDISPATCHED) {
+            useCase(command(targetChecked = true))
+        }
+        firstApplyStarted.await()
+
+        val latestCommand = command(targetChecked = false, date = nextDay)
+        useCase(latestCommand)
+        firstApplyCanFinish.complete(Unit)
+        firstCommand.await()
+
+        assertEquals(listOf(command(targetChecked = true), latestCommand), appliedCommands)
+        assertEquals(
+            SetTodayHabitCheckedUseCase.DomainEvent.Reverted(
+                habitId = 1,
+                failedTargetChecked = false,
+                today = nextDay,
+                reason = SetTodayHabitCheckedUseCase.RollbackReason.PERSIST_FAILED
+            ),
+            events.await().last()
+        )
+    }
+
+    @Test
     fun invoke_emitsRevertedWhenSourceDoesNotConverge() = runBlocking {
         val useCase = SetTodayHabitCheckedUseCase(
             applyCommand = { SetTodayHabitCheckedUseCase.ApplyResult.Accepted },
@@ -219,11 +354,14 @@ class SetTodayHabitCheckedUseCaseTest {
         )
     }
 
-    private fun command(targetChecked: Boolean): SetTodayHabitCheckedUseCase.Command {
+    private fun command(
+        targetChecked: Boolean,
+        date: LocalDate = today
+    ): SetTodayHabitCheckedUseCase.Command {
         return SetTodayHabitCheckedUseCase.Command(
             habitId = 1,
             targetChecked = targetChecked,
-            today = today
+            today = date
         )
     }
 }

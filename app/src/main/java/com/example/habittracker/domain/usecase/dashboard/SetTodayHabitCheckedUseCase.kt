@@ -30,7 +30,7 @@ class SetTodayHabitCheckedUseCase(
 
     private val optimisticChecked = mutableMapOf<Int, Boolean>()
     private val inFlight = mutableSetOf<Int>()
-    private val pendingTarget = mutableMapOf<Int, Boolean>()
+    private val pendingCommand = mutableMapOf<Int, Command>()
 
     val events: SharedFlow<DomainEvent> = _events.asSharedFlow()
 
@@ -39,7 +39,7 @@ class SetTodayHabitCheckedUseCase(
             val event = stateMutex.withLock {
                 if (command.habitId in inFlight) {
                     val oldTargetChecked = optimisticChecked[command.habitId] ?: command.targetChecked
-                    pendingTarget[command.habitId] = command.targetChecked
+                    pendingCommand[command.habitId] = command
                     optimisticChecked[command.habitId] = command.targetChecked
 
                     DomainEvent.Superseded(
@@ -74,11 +74,11 @@ class SetTodayHabitCheckedUseCase(
         while (true) {
             val result = persistAndConfirm(currentCommand)
             val decision = stateMutex.withLock {
-                val pending = pendingTarget.remove(currentCommand.habitId)
+                val pending = pendingCommand.remove(currentCommand.habitId)
 
                 if (pending != null) {
-                    optimisticChecked[currentCommand.habitId] = pending
-                    QueueDecision.Continue(currentCommand.copy(targetChecked = pending))
+                    optimisticChecked[currentCommand.habitId] = pending.targetChecked
+                    QueueDecision.Continue(pending)
                 } else {
                     inFlight -= currentCommand.habitId
                     optimisticChecked -= currentCommand.habitId
