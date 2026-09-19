@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import com.example.habittracker.data.local.HabitDatabase
@@ -65,16 +66,15 @@ class MainActivity : ComponentActivity() {
             }
         )
 
-        val addHabitViewModel = HabitViewModel(repository)
-        val dashboardViewModel = DashboardViewModel(
+        val viewModelFactory = HabitTrackerViewModelFactory(
+            repository = repository,
             habitDao = db.habitDao(),
             recordDao = db.recordDao(),
             setTodayHabitChecked = setTodayHabitCheckedUseCase
         )
-        val statsViewModel = StatsViewModel(
-            habitDao = db.habitDao(),
-            recordDao = db.recordDao()
-        )
+        val addHabitViewModel = ViewModelProvider(this, viewModelFactory)[HabitViewModel::class.java]
+        val dashboardViewModel = ViewModelProvider(this, viewModelFactory)[DashboardViewModel::class.java]
+        val statsViewModel = ViewModelProvider(this, viewModelFactory)[StatsViewModel::class.java]
 
         enableEdgeToEdge()
         setContent {
