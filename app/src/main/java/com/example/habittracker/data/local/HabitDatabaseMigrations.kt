@@ -24,4 +24,30 @@ object HabitDatabaseMigrations {
             )
         }
     }
+
+    val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("DROP TABLE IF EXISTS records_migrated")
+            db.execSQL(
+                "CREATE TABLE records_migrated (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "habitId INTEGER NOT NULL, " +
+                    "date INTEGER NOT NULL, " +
+                    "isDone INTEGER NOT NULL, " +
+                    "FOREIGN KEY(habitId) REFERENCES habits(id) " +
+                    "ON UPDATE NO ACTION ON DELETE CASCADE" +
+                    ")"
+            )
+            db.execSQL(
+                "INSERT INTO records_migrated (id, habitId, date, isDone) " +
+                    "SELECT records.id, records.habitId, records.date, records.isDone " +
+                    "FROM records INNER JOIN habits ON records.habitId = habits.id"
+            )
+            db.execSQL("DROP TABLE records")
+            db.execSQL("ALTER TABLE records_migrated RENAME TO records")
+            db.execSQL(
+                "CREATE UNIQUE INDEX index_records_habitId_date ON records (habitId, date)"
+            )
+        }
+    }
 }

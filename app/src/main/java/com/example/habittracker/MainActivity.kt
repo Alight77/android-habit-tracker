@@ -31,7 +31,10 @@ class MainActivity : ComponentActivity() {
             HabitDatabase::class.java,
             "habits.db"
         )
-            .addMigrations(HabitDatabaseMigrations.MIGRATION_2_3)
+            .addMigrations(
+                HabitDatabaseMigrations.MIGRATION_2_3,
+                HabitDatabaseMigrations.MIGRATION_3_4
+            )
             .build()
 
         val repository = HabitRepository(

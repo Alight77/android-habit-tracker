@@ -1,5 +1,6 @@
 package com.example.habittracker.data.local
 
+import androidx.room.Room
 import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -10,6 +11,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -89,6 +92,72 @@ class HabitDatabaseMigrationTest {
                 assertFalse(cursor.moveToNext())
             }
             close()
+        }
+    }
+
+    @Test
+    fun migrate3To4_removesOrphanRecords() {
+        val databaseName = "habit-migration-orphan-record-test"
+
+        helper.createDatabase(databaseName, 3).apply {
+            insertHabit()
+            execSQL("INSERT INTO records (id, habitId, date, isDone) VALUES (1, 1, 20000, 1)")
+            execSQL("INSERT INTO records (id, habitId, date, isDone) VALUES (2, 99, 20001, 1)")
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            databaseName,
+            4,
+            true,
+            HabitDatabaseMigrations.MIGRATION_3_4
+        ).apply {
+            query("SELECT habitId FROM records ORDER BY id").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(1, cursor.getInt(0))
+                assertFalse(cursor.moveToNext())
+            }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate3To4_cascadesRecordsWhenHabitDeleted() {
+        val databaseName = "habit-migration-cascade-test"
+
+        helper.createDatabase(databaseName, 3).apply {
+            insertHabit()
+            execSQL("INSERT INTO records (id, habitId, date, isDone) VALUES (1, 1, 20000, 1)")
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            databaseName,
+            4,
+            true,
+            HabitDatabaseMigrations.MIGRATION_3_4
+        ).close()
+
+        val database = Room.databaseBuilder(
+            InstrumentationRegistry.getInstrumentation().targetContext,
+            HabitDatabase::class.java,
+            databaseName
+        ).build()
+        try {
+            runBlocking {
+                database.habitDao().deleteHabit(
+                    HabitEntity(
+                        id = 1,
+                        name = "Read",
+                        description = "",
+                        targetPerWeek = 7,
+                        createdAt = 0
+                    )
+                )
+                assertTrue(database.recordDao().getAllRecords().first().isEmpty())
+            }
+        } finally {
+            database.close()
         }
     }
 

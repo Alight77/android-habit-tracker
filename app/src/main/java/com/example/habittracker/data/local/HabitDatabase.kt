@@ -8,7 +8,7 @@ import androidx.room.RoomDatabase
         HabitEntity::class,
         RecordEntity::class
     ],
-    version = 3
+    version = 4
 )
 abstract class HabitDatabase : RoomDatabase() {
 
