@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Button
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -53,7 +54,8 @@ fun DashboardScreen(
             viewModel.onHabitChecked(habitId, targetChecked)
         },
         onAddClick = onAddClick,
-        onStatsClick = onStatsClick
+        onStatsClick = onStatsClick,
+        onRetry = viewModel::retry
     )
 }
 
@@ -64,7 +66,8 @@ private fun DashboardScaffold(
     snackbarHostState: SnackbarHostState?,
     onCheckClick: (Int, Boolean) -> Unit,
     onAddClick: () -> Unit,
-    onStatsClick: () -> Unit
+    onStatsClick: () -> Unit,
+    onRetry: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -92,6 +95,7 @@ private fun DashboardScaffold(
         DashboardBody(
             uiState = uiState,
             onCheckClick = onCheckClick,
+            onRetry = onRetry,
             modifier = Modifier.padding(padding)
         )
     }
@@ -102,14 +106,16 @@ fun DashboardContent(
     uiState: DashboardUiState,
     onCheckClick: (Int, Boolean) -> Unit,
     onAddClick: () -> Unit,
-    onStatsClick: () -> Unit
+    onStatsClick: () -> Unit,
+    onRetry: () -> Unit
 ) {
     DashboardScaffold(
         uiState = uiState,
         snackbarHostState = null,
         onCheckClick = onCheckClick,
         onAddClick = onAddClick,
-        onStatsClick = onStatsClick
+        onStatsClick = onStatsClick,
+        onRetry = onRetry
     )
 }
 
@@ -117,6 +123,7 @@ fun DashboardContent(
 private fun DashboardBody(
     uiState: DashboardUiState,
     onCheckClick: (Int, Boolean) -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     when (uiState) {
@@ -134,7 +141,15 @@ private fun DashboardBody(
                 modifier = modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text(uiState.message)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(uiState.message)
+                    Button(
+                        onClick = onRetry,
+                        modifier = Modifier.padding(top = 12.dp)
+                    ) {
+                        Text("重试")
+                    }
+                }
             }
         }
 
@@ -203,7 +218,8 @@ fun DashboardContentSuccessPreview() {
         uiState = previewState,
         onCheckClick = { _, _ -> },
         onAddClick = {},
-        onStatsClick = {}
+        onStatsClick = {},
+        onRetry = {}
     )
 }
 
@@ -214,7 +230,8 @@ fun DashboardContentEmptyPreview() {
         uiState = DashboardUiState.Success(emptyList()),
         onCheckClick = { _, _ -> },
         onAddClick = {},
-        onStatsClick = {}
+        onStatsClick = {},
+        onRetry = {}
     )
 }
 
@@ -225,7 +242,8 @@ fun DashboardContentLoadingPreview() {
         uiState = DashboardUiState.Loading,
         onCheckClick = { _, _ -> },
         onAddClick = {},
-        onStatsClick = {}
+        onStatsClick = {},
+        onRetry = {}
     )
 }
 
@@ -236,6 +254,7 @@ fun DashboardContentErrorPreview() {
         uiState = DashboardUiState.Error("Failed to load habits"),
         onCheckClick = { _, _ -> },
         onAddClick = {},
-        onStatsClick = {}
+        onStatsClick = {},
+        onRetry = {}
     )
 }

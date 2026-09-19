@@ -6,6 +6,7 @@ import com.example.habittracker.data.local.RecordDao
 import com.example.habittracker.data.local.RecordEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
 class TestHabitDao(initialHabits: List<HabitEntity>) : HabitDao {
@@ -20,6 +21,28 @@ class TestHabitDao(initialHabits: List<HabitEntity>) : HabitDao {
     }
 
     override fun getAllHabits(): Flow<List<HabitEntity>> = habits
+}
+
+class ThrowOnceHabitDao(
+    private val emittedHabits: List<HabitEntity>
+) : HabitDao {
+    var subscriptionCount = 0
+        private set
+
+    private var shouldFail = true
+
+    override suspend fun insertHabit(habit: HabitEntity) = Unit
+
+    override suspend fun deleteHabit(habit: HabitEntity) = Unit
+
+    override fun getAllHabits(): Flow<List<HabitEntity>> = flow {
+        subscriptionCount += 1
+        if (shouldFail) {
+            shouldFail = false
+            error("habit source unavailable")
+        }
+        emit(emittedHabits)
+    }
 }
 
 class TestRecordDao(initialRecords: List<RecordEntity>) : RecordDao {

@@ -6,6 +6,7 @@ import com.example.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUse
 import com.example.habittracker.testutil.MainDispatcherRule
 import com.example.habittracker.testutil.TestHabitDao
 import com.example.habittracker.testutil.TestRecordDao
+import com.example.habittracker.testutil.ThrowOnceHabitDao
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -86,6 +87,33 @@ class DashboardViewModelTest {
             DashboardUiEvent.ShowMessage("打卡状态冲突，请重试"),
             event.await()
         )
+    }
+
+    @Test
+    fun retry_afterHabitFlowFails_resubscribesAndEmitsSuccess() = runTest {
+        val today = LocalDate.of(2026, 9, 19)
+        val habitDao = ThrowOnceHabitDao(listOf(habit(id = 1, name = "阅读")))
+        val viewModel = DashboardViewModel(
+            habitDao = habitDao,
+            recordDao = TestRecordDao(emptyList()),
+            setTodayHabitChecked = acceptedUseCase(),
+            todaySource = flowOf(today)
+        )
+
+        val error = viewModel.uiState
+            .filterIsInstance<DashboardUiState.Error>()
+            .first()
+
+        assertEquals("加载习惯数据失败，请重试", error.message)
+
+        viewModel.retry()
+
+        val success = viewModel.uiState
+            .filterIsInstance<DashboardUiState.Success>()
+            .first { state -> state.items.singleOrNull()?.name == "阅读" }
+
+        assertEquals("阅读", success.items.single().name)
+        assertEquals(2, habitDao.subscriptionCount)
     }
 
     private fun acceptedUseCase(): SetTodayHabitCheckedUseCase {

@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +36,8 @@ fun StatsScreen(
 
     StatsContent(
         uiState = state,
-        onBackClick = onBackClick
+        onBackClick = onBackClick,
+        onRetry = viewModel::retry
     )
 }
 
@@ -43,7 +45,8 @@ fun StatsScreen(
 @Composable
 fun StatsContent(
     uiState: StatsUiState,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onRetry: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -66,6 +69,22 @@ fun StatsContent(
                         .padding(padding)
                         .padding(16.dp)
                 )
+            }
+
+            is StatsUiState.Error -> {
+                Column(
+                    modifier = Modifier
+                        .padding(padding)
+                        .padding(16.dp)
+                ) {
+                    Text(uiState.message)
+                    Button(
+                        onClick = onRetry,
+                        modifier = Modifier.padding(top = 12.dp)
+                    ) {
+                        Text("重试")
+                    }
+                }
             }
 
             is StatsUiState.Success -> {
@@ -147,6 +166,7 @@ fun StatsContentPreview() {
                 bestCurrentStreak = 5
             )
         ),
-        onBackClick = {}
+        onBackClick = {},
+        onRetry = {}
     )
 }

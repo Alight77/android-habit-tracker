@@ -7,18 +7,22 @@ import com.example.habittracker.data.local.RecordDao
 import com.example.habittracker.domain.usecase.calculateStreak
 import com.example.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 import com.example.habittracker.domain.usecase.epochDayToLocalDate
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModel(
     private val habitDao: HabitDao,
     private val recordDao: RecordDao,
@@ -36,6 +40,7 @@ class DashboardViewModel(
     private val habitsFlow = habitDao.getAllHabits()
 
     private val optimisticChecked = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
+    private val retryRequest = MutableStateFlow(0)
     private val _events = MutableSharedFlow<DashboardUiEvent>(extraBufferCapacity = 1)
 
     val events = _events.asSharedFlow()
@@ -98,29 +103,45 @@ class DashboardViewModel(
         }
     }
 
+    fun retry() {
+        retryRequest.update { request -> request + 1 }
+    }
+
     val uiState: StateFlow<DashboardUiState> =
-        combine(
-            habitsFlow,
-            recordsFlow,
-            todayFlow,
-            optimisticChecked
-        ) { habits, records, today, optimistic ->
-            val recordsByHabitId = records.groupBy { it.habitId }
-            val items = habits.map { habit ->
-                val recordsForHabit = recordsByHabitId[habit.id] ?: emptyList()
-                val doneRecordsForHabit = recordsForHabit.filter { it.isDone }
-                val dbDoneToday = recordsForHabit.any { record ->
-                    epochDayToLocalDate(record.date) == today && record.isDone
+        retryRequest
+            .flatMapLatest {
+                combine(
+                    habitsFlow,
+                    recordsFlow,
+                    todayFlow,
+                    optimisticChecked
+                ) { habits, records, today, optimistic ->
+                    val recordsByHabitId = records.groupBy { it.habitId }
+                    val items = habits.map { habit ->
+                        val recordsForHabit = recordsByHabitId[habit.id] ?: emptyList()
+                        val doneRecordsForHabit = recordsForHabit.filter { it.isDone }
+                        val dbDoneToday = recordsForHabit.any { record ->
+                            epochDayToLocalDate(record.date) == today && record.isDone
+                        }
+                        val mergedDoneToday = optimistic[habit.id] ?: dbDoneToday
+                        val dates = doneRecordsForHabit.map { record -> epochDayToLocalDate(record.date) }
+                        val streak = calculateStreak(dates, today)
+
+                        HabitItemUiState(
+                            habit.id,
+                            habit.name,
+                            habit.targetPerWeek,
+                            mergedDoneToday,
+                            streak
+                        )
+                    }
+
+                    val state: DashboardUiState = DashboardUiState.Success(items)
+                    state
+                }.catch {
+                    emit(DashboardUiState.Error("加载习惯数据失败，请重试"))
                 }
-                val mergedDoneToday = optimistic[habit.id] ?: dbDoneToday
-                val dates = doneRecordsForHabit.map { record -> epochDayToLocalDate(record.date) }
-                val streak = calculateStreak(dates, today)
-
-                HabitItemUiState(habit.id, habit.name, habit.targetPerWeek, mergedDoneToday, streak)
             }
-
-            DashboardUiState.Success(items)
-        }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),

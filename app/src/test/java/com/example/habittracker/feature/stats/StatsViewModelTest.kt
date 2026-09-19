@@ -5,6 +5,7 @@ import com.example.habittracker.data.local.RecordEntity
 import com.example.habittracker.testutil.MainDispatcherRule
 import com.example.habittracker.testutil.TestHabitDao
 import com.example.habittracker.testutil.TestRecordDao
+import com.example.habittracker.testutil.ThrowOnceHabitDao
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
@@ -55,6 +56,32 @@ class StatsViewModelTest {
             ),
             state.summary
         )
+    }
+
+    @Test
+    fun retry_afterHabitFlowFails_resubscribesAndEmitsSuccess() = runTest {
+        val today = LocalDate.of(2026, 9, 19)
+        val habitDao = ThrowOnceHabitDao(listOf(habit(id = 1, name = "阅读")))
+        val viewModel = StatsViewModel(
+            habitDao = habitDao,
+            recordDao = TestRecordDao(emptyList()),
+            todaySource = flowOf(today)
+        )
+
+        val error = viewModel.uiState
+            .filterIsInstance<StatsUiState.Error>()
+            .first()
+
+        assertEquals("加载统计数据失败，请重试", error.message)
+
+        viewModel.retry()
+
+        val success = viewModel.uiState
+            .filterIsInstance<StatsUiState.Success>()
+            .first { state -> state.summary.totalHabits == 1 }
+
+        assertEquals(1, success.summary.totalHabits)
+        assertEquals(2, habitDao.subscriptionCount)
     }
 
     private fun habit(id: Int, name: String): HabitEntity {
