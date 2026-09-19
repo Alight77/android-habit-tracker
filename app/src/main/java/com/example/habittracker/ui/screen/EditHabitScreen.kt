@@ -18,11 +18,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.habittracker.R
 import com.example.habittracker.feature.edit.EditHabitUiEvent
 import com.example.habittracker.feature.edit.EditHabitViewModel
 import com.example.habittracker.ui.component.HabitFormContent
@@ -57,7 +59,7 @@ fun EditHabitScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("编辑习惯") },
+                title = { Text(stringResource(R.string.edit_habit)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Text("‹")
@@ -90,7 +92,7 @@ fun EditHabitScreen(
                         onClick = viewModel::retry,
                         modifier = Modifier.padding(top = 12.dp)
                     ) {
-                        Text("重试")
+                        Text(stringResource(R.string.retry))
                     }
                 }
             }
@@ -110,7 +112,7 @@ fun EditHabitScreen(
                         onDecreaseTarget = viewModel::decreaseTargetPerWeek,
                         onIncreaseTarget = viewModel::increaseTargetPerWeek,
                         onSave = viewModel::saveHabit,
-                        saveLabel = "保存修改"
+                        saveLabel = stringResource(R.string.save_changes)
                     )
                 }
             }

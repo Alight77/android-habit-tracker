@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -104,6 +105,21 @@ class AddHabitScreenTest {
             5,
             runBlocking { database.habitDao().getAllHabits().first().single().targetPerWeek }
         )
+    }
+
+    @Test
+    fun backButton_invokesOnBackClick() {
+        val backClickCount = AtomicInteger(0)
+        composeRule.setContent {
+            AddHabitScreen(
+                viewModel = viewModel(),
+                onBackClick = { backClickCount.incrementAndGet() }
+            )
+        }
+
+        composeRule.onNodeWithContentDescription("返回").performClick()
+
+        assertEquals(1, backClickCount.get())
     }
 
     private fun viewModel(): HabitViewModel {

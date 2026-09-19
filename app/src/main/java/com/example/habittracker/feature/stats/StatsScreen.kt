@@ -21,10 +21,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.habittracker.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,7 +53,7 @@ fun StatsContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("统计") },
+                title = { Text(stringResource(R.string.statistics)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Text("‹")
@@ -82,7 +84,7 @@ fun StatsContent(
                         onClick = onRetry,
                         modifier = Modifier.padding(top = 12.dp)
                     ) {
-                        Text("重试")
+                        Text(stringResource(R.string.retry))
                     }
                 }
             }
@@ -103,11 +105,14 @@ private fun StatsSummaryList(
     modifier: Modifier = Modifier
 ) {
     val items = listOf(
-        StatRow("今日完成", "${summary.todayDoneCount} / ${summary.totalHabits}"),
-        StatRow("近 7 天完成率", "${summary.recentSevenDayCompletionPercent}%"),
-        StatRow("最高 streak", summary.bestCurrentStreak.toString()),
-        StatRow("总打卡次数", summary.totalDoneCount.toString()),
-        StatRow("Habit 数量", summary.totalHabits.toString())
+        StatRow(stringResource(R.string.stats_today_done), "${summary.todayDoneCount} / ${summary.totalHabits}"),
+        StatRow(
+            stringResource(R.string.stats_recent_seven_day_completion),
+            "${summary.recentSevenDayCompletionPercent}%"
+        ),
+        StatRow(stringResource(R.string.stats_best_streak), summary.bestCurrentStreak.toString()),
+        StatRow(stringResource(R.string.stats_total_done), summary.totalDoneCount.toString()),
+        StatRow(stringResource(R.string.stats_total_habits), summary.totalHabits.toString())
     )
 
     LazyColumn(

@@ -14,7 +14,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.habittracker.R
 import com.example.habittracker.viewmodel.MAX_TARGET_PER_WEEK
 import com.example.habittracker.viewmodel.MIN_TARGET_PER_WEEK
 
@@ -34,7 +36,7 @@ fun HabitFormContent(
         OutlinedTextField(
             value = name,
             onValueChange = onNameChanged,
-            label = { Text("习惯名称") },
+            label = { Text(stringResource(R.string.habit_name)) },
             isError = nameError != null,
             supportingText = nameError?.let { message ->
                 { Text(message) }
@@ -43,7 +45,7 @@ fun HabitFormContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text("每周目标次数")
+        Text(stringResource(R.string.weekly_goal))
         Spacer(modifier = Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(
@@ -54,7 +56,7 @@ fun HabitFormContent(
             }
 
             Spacer(modifier = Modifier.width(16.dp))
-            Text("$targetPerWeek 次 / 周")
+            Text(stringResource(R.string.weekly_goal_value, targetPerWeek))
             Spacer(modifier = Modifier.width(16.dp))
 
             OutlinedButton(
@@ -78,7 +80,7 @@ fun HabitFormContent(
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("保存中…")
+                    Text(stringResource(R.string.saving))
                 }
             } else {
                 Text(saveLabel)

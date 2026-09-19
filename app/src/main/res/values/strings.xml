@@ -1,3 +1,29 @@
 <resources>
-    <string name="app_name">HabitTracker</string>
+    <string name="app_name">习惯打卡</string>
+    <string name="back">返回</string>
+    <string name="add_habit">新增习惯</string>
+    <string name="edit_habit">编辑习惯</string>
+    <string name="habit_name">习惯名称</string>
+    <string name="weekly_goal">每周目标次数</string>
+    <string name="weekly_goal_value">%1$d 次 / 周</string>
+    <string name="save">保存</string>
+    <string name="save_changes">保存修改</string>
+    <string name="saving">保存中…</string>
+    <string name="retry">重试</string>
+    <string name="statistics">统计</string>
+    <string name="loading">加载中…</string>
+    <string name="start_with_habit">从一个小习惯开始</string>
+    <string name="edit">编辑</string>
+    <string name="delete">删除</string>
+    <string name="delete_habit">删除习惯</string>
+    <string name="delete_habit_confirmation">确定删除“%1$s”吗？</string>
+    <string name="confirm">确认</string>
+    <string name="cancel">取消</string>
+    <string name="habit_target_summary">每周目标 %1$d 次</string>
+    <string name="habit_streak_summary">连续 %1$d 天</string>
+    <string name="stats_today_done">今日完成</string>
+    <string name="stats_recent_seven_day_completion">近 7 天完成率</string>
+    <string name="stats_best_streak">最长连续打卡</string>
+    <string name="stats_total_done">总打卡次数</string>
+    <string name="stats_total_habits">习惯数量</string>
 </resources>

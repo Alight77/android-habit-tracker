@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.habittracker.R
 import com.example.habittracker.ui.component.HabitCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -87,10 +89,10 @@ private fun DashboardScaffold(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("HabitTracker") },
+                title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     TextButton(onClick = onStatsClick) {
-                        Text("统计")
+                        Text(stringResource(R.string.statistics))
                     }
                 }
             )
@@ -157,7 +159,7 @@ private fun DashboardBody(
                 modifier = modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text("加载中...")
+                Text(stringResource(R.string.loading))
             }
         }
 
@@ -172,7 +174,7 @@ private fun DashboardBody(
                         onClick = onRetry,
                         modifier = Modifier.padding(top = 12.dp)
                     ) {
-                        Text("重试")
+                        Text(stringResource(R.string.retry))
                     }
                 }
             }
@@ -202,8 +204,8 @@ private fun DashboardBody(
     habitPendingDeletion?.let { habit ->
         AlertDialog(
             onDismissRequest = { habitPendingDeletion = null },
-            title = { Text("删除习惯") },
-            text = { Text("确定删除“${habit.name}”吗？") },
+            title = { Text(stringResource(R.string.delete_habit)) },
+            text = { Text(stringResource(R.string.delete_habit_confirmation, habit.name)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -211,12 +213,12 @@ private fun DashboardBody(
                         onDeleteHabit(habit.id)
                     }
                 ) {
-                    Text("确认")
+                    Text(stringResource(R.string.confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { habitPendingDeletion = null }) {
-                    Text("取消")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -233,7 +235,7 @@ private fun EmptyDashboard(modifier: Modifier = Modifier) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "从一个小习惯开始",
+                text = stringResource(R.string.start_with_habit),
                 modifier = Modifier.padding(top = 6.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.outline
