@@ -1,0 +1,16 @@
+# Normalize text files and keep LF line endings in the repository/worktree
+* text=auto eol=lf
+
+# Windows scripts should use CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.jar binary
+*.keystore binary
+*.jks binary
+
