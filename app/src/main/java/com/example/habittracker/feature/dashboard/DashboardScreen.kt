@@ -251,14 +251,14 @@ fun DashboardContentSuccessPreview() {
         items = listOf(
             HabitItemUiState(
                 id = 1,
-                name = "Exercise",
+                name = "晨练",
                 targetPerWeek = 5,
                 isDoneToday = true,
                 streak = 4
             ),
             HabitItemUiState(
                 id = 2,
-                name = "Read",
+                name = "阅读",
                 targetPerWeek = 7,
                 isDoneToday = false,
                 streak = 0

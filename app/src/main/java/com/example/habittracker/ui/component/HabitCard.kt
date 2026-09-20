@@ -3,6 +3,7 @@ package com.example.habittracker.ui.component
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -85,31 +86,63 @@ fun HabitCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = stringResource(R.string.habit_target_summary, habit.targetPerWeek),
-                    modifier = Modifier.padding(top = 4.dp),
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.outline,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.habit_target_summary, habit.targetPerWeek),
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.outline,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = " · ",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    Text(
+                        text = stringResource(R.string.habit_streak_summary, habit.streak),
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.outline,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            Box(modifier = Modifier.height(64.dp)) {
-                Text(
-                    text = stringResource(R.string.habit_streak_summary, habit.streak),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.align(Alignment.TopCenter)
-                )
-
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Box {
+                    IconButton(onClick = { moreMenuExpanded = true }) {
+                        Text("⋮")
+                    }
+                    DropdownMenu(
+                        expanded = moreMenuExpanded,
+                        onDismissRequest = { moreMenuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.edit)) },
+                            onClick = {
+                                moreMenuExpanded = false
+                                onEditClick()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.delete)) },
+                            onClick = {
+                                moreMenuExpanded = false
+                                onDeleteClick()
+                            }
+                        )
+                    }
+                }
                 Button(
                     modifier = Modifier
-                        .size(44.dp)
-                        .padding(top = 4.dp)
-                        .align(Alignment.BottomCenter),
+                        .size(44.dp),
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = buttonContainerColor,
@@ -125,31 +158,6 @@ fun HabitCard(
                     Text(text = "✓")
                 }
             }
-
-            Box {
-                IconButton(onClick = { moreMenuExpanded = true }) {
-                    Text("⋮")
-                }
-                DropdownMenu(
-                    expanded = moreMenuExpanded,
-                    onDismissRequest = { moreMenuExpanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.edit)) },
-                        onClick = {
-                            moreMenuExpanded = false
-                            onEditClick()
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.delete)) },
-                        onClick = {
-                            moreMenuExpanded = false
-                            onDeleteClick()
-                        }
-                    )
-                }
-            }
         }
     }
 }
@@ -161,10 +169,29 @@ fun HabitCardPreview() {
         HabitCard(
             habit = HabitItemUiState(
                 id = 1,
-                name = "Exercise",
+                name = "晨练",
                 targetPerWeek = 7,
                 isDoneToday = true,
                 streak = 1
+            ),
+            onCheckClick = {},
+            onEditClick = {},
+            onDeleteClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 320, name = "HabitCard - Long name")
+@Composable
+fun HabitCardLongNamePreview() {
+    HabitTrackerTheme {
+        HabitCard(
+            habit = HabitItemUiState(
+                id = 1,
+                name = "通勤时阅读 Android 工程实践文章",
+                targetPerWeek = 7,
+                isDoneToday = false,
+                streak = 12
             ),
             onCheckClick = {},
             onEditClick = {},
