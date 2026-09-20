@@ -3,6 +3,7 @@ package com.example.habittracker.feature.dashboard
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -44,16 +45,36 @@ class DashboardContentTest {
             )
         }
 
-        composeRule.onNodeWithText("⋮").performClick()
+        composeRule.onNodeWithContentDescription("更多操作：阅读").performClick()
         composeRule.onNodeWithText("编辑").performClick()
         assertEquals(7, editedHabitId.get())
 
-        composeRule.onNodeWithText("⋮").performClick()
+        composeRule.onNodeWithContentDescription("更多操作：阅读").performClick()
         composeRule.onNodeWithText("删除").performClick()
         composeRule.onNodeWithText("确定删除“阅读”吗？").assertIsDisplayed()
         assertEquals(0, deletedHabitId.get())
 
         composeRule.onNodeWithText("确认").performClick()
         assertEquals(7, deletedHabitId.get())
+    }
+
+    @Test
+    fun addAction_exposesContentDescriptionAndInvokesCallback() {
+        val addClickCount = AtomicInteger(0)
+        composeRule.setContent {
+            DashboardContent(
+                uiState = DashboardUiState.Success(emptyList()),
+                onCheckClick = { _, _ -> },
+                onAddClick = { addClickCount.incrementAndGet() },
+                onStatsClick = {},
+                onEditClick = {},
+                onDeleteHabit = {},
+                onRetry = {}
+            )
+        }
+
+        composeRule.onNodeWithContentDescription("新增习惯").performClick()
+
+        assertEquals(1, addClickCount.get())
     }
 }

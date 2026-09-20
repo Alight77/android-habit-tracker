@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -31,6 +31,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -48,6 +51,22 @@ fun HabitCard(
     onDeleteClick: () -> Unit
 ) {
     var moreMenuExpanded by remember { mutableStateOf(false) }
+    val checkActionText = stringResource(
+        if (habit.isDoneToday) R.string.completed else R.string.check_in
+    )
+    val checkStateDescription = stringResource(
+        if (habit.isDoneToday) {
+            R.string.habit_check_completed_state
+        } else {
+            R.string.habit_check_incomplete_state
+        }
+    )
+    val checkContentDescription = stringResource(
+        R.string.habit_check_content_description,
+        checkActionText,
+        habit.name
+    )
+    val moreActionsContentDescription = stringResource(R.string.habit_more_actions, habit.name)
     val cardContainerColor by animateColorAsState(
         targetValue = if (habit.isDoneToday) {
             MaterialTheme.colorScheme.secondaryContainer
@@ -117,7 +136,12 @@ fun HabitCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Box {
-                    IconButton(onClick = { moreMenuExpanded = true }) {
+                    IconButton(
+                        modifier = Modifier.semantics {
+                            contentDescription = moreActionsContentDescription
+                        },
+                        onClick = { moreMenuExpanded = true }
+                    ) {
                         Text("⋮")
                     }
                     DropdownMenu(
@@ -142,8 +166,12 @@ fun HabitCard(
                 }
                 Button(
                     modifier = Modifier
-                        .size(44.dp),
-                    shape = CircleShape,
+                        .widthIn(min = 72.dp)
+                        .semantics {
+                            contentDescription = checkContentDescription
+                            stateDescription = checkStateDescription
+                        },
+                    shape = RoundedCornerShape(22.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = buttonContainerColor,
                         contentColor = if (habit.isDoneToday) {
@@ -152,10 +180,18 @@ fun HabitCard(
                             MaterialTheme.colorScheme.onPrimary
                         }
                     ),
-                    contentPadding = PaddingValues(0.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp),
                     onClick = onCheckClick
                 ) {
-                    Text(text = "✓")
+                    if (habit.isDoneToday) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = "✓")
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = checkActionText, fontSize = 12.sp)
+                        }
+                    } else {
+                        Text(text = checkActionText, fontSize = 12.sp)
+                    }
                 }
             }
         }
