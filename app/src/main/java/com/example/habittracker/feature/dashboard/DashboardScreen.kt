@@ -39,7 +39,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.habittracker.R
 import com.example.habittracker.domain.usecase.RecentGoalProgress
-import com.example.habittracker.ui.component.HabitCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

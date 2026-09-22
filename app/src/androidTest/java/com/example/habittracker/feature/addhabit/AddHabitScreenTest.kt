@@ -1,4 +1,4 @@
-package com.example.habittracker.ui.screen
+package com.example.habittracker.feature.addhabit
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
@@ -14,7 +14,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.habittracker.data.local.HabitDatabase
 import com.example.habittracker.data.repository.HabitRepository
-import com.example.habittracker.viewmodel.HabitViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -122,8 +121,8 @@ class AddHabitScreenTest {
         assertEquals(1, backClickCount.get())
     }
 
-    private fun viewModel(): HabitViewModel {
-        return HabitViewModel(
+    private fun viewModel(): AddHabitViewModel {
+        return AddHabitViewModel(
             HabitRepository(database.habitDao(), database.recordDao())
         )
     }

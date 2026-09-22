@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.habittracker.data.local.HabitDao
 import com.example.habittracker.data.local.RecordDao
-import com.example.habittracker.feature.dashboard.systemTodayFlow
+import com.example.habittracker.core.time.systemTodayFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow

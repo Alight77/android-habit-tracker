@@ -1,4 +1,4 @@
-package com.example.habittracker.ui.component
+package com.example.habittracker.feature.dashboard
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -11,7 +11,6 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.example.habittracker.feature.dashboard.HabitItemUiState
 import com.example.habittracker.domain.usecase.RecentGoalProgress
 import com.example.habittracker.ui.theme.HabitTrackerTheme
 import org.junit.Assert.assertEquals

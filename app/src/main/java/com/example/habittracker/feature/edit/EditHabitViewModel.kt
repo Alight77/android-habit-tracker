@@ -5,8 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.habittracker.data.local.HabitEntity
 import com.example.habittracker.data.repository.HabitRepository
-import com.example.habittracker.viewmodel.MAX_TARGET_PER_WEEK
-import com.example.habittracker.viewmodel.MIN_TARGET_PER_WEEK
+import com.example.habittracker.domain.model.WeeklyTargetConstraints.MAX_TARGET_PER_WEEK
+import com.example.habittracker.domain.model.WeeklyTargetConstraints.MIN_TARGET_PER_WEEK
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers

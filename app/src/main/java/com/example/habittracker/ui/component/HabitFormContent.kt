@@ -19,8 +19,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.example.habittracker.R
-import com.example.habittracker.viewmodel.MAX_TARGET_PER_WEEK
-import com.example.habittracker.viewmodel.MIN_TARGET_PER_WEEK
+import com.example.habittracker.domain.model.WeeklyTargetConstraints.MAX_TARGET_PER_WEEK
+import com.example.habittracker.domain.model.WeeklyTargetConstraints.MIN_TARGET_PER_WEEK
 
 @Composable
 fun HabitFormContent(

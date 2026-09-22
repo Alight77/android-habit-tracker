@@ -1,4 +1,4 @@
-package com.example.habittracker.ui.screen
+package com.example.habittracker.feature.edit
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
@@ -15,7 +15,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.example.habittracker.data.local.HabitDatabase
 import com.example.habittracker.data.local.HabitEntity
 import com.example.habittracker.data.repository.HabitRepository
-import com.example.habittracker.feature.edit.EditHabitViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After

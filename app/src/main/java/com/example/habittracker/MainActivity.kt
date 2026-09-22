@@ -11,11 +11,11 @@ import com.example.habittracker.data.local.HabitDatabase
 import com.example.habittracker.data.local.HabitDatabaseMigrations
 import com.example.habittracker.data.repository.HabitRepository
 import com.example.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
+import com.example.habittracker.feature.addhabit.AddHabitViewModel
 import com.example.habittracker.feature.dashboard.DashboardViewModel
 import com.example.habittracker.feature.stats.StatsViewModel
 import com.example.habittracker.ui.navigation.HabitNavHost
 import com.example.habittracker.ui.theme.HabitTrackerTheme
-import com.example.habittracker.viewmodel.HabitViewModel
 import kotlinx.coroutines.flow.map
 
 class MainActivity : ComponentActivity() {
@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
             recordDao = db.recordDao(),
             setTodayHabitChecked = setTodayHabitCheckedUseCase
         )
-        val addHabitViewModel = ViewModelProvider(this, viewModelFactory)[HabitViewModel::class.java]
+        val addHabitViewModel = ViewModelProvider(this, viewModelFactory)[AddHabitViewModel::class.java]
         val dashboardViewModel = ViewModelProvider(this, viewModelFactory)[DashboardViewModel::class.java]
         val statsViewModel = ViewModelProvider(this, viewModelFactory)[StatsViewModel::class.java]
 

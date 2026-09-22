@@ -1,4 +1,4 @@
-package com.example.habittracker.feature.dashboard
+package com.example.habittracker.core.time
 
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay

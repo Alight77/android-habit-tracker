@@ -1,4 +1,4 @@
-package com.example.habittracker.viewmodel
+package com.example.habittracker.feature.addhabit
 
 import com.example.habittracker.data.local.HabitDao
 import com.example.habittracker.data.local.HabitEntity
@@ -20,12 +20,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class HabitViewModelTest {
+class AddHabitViewModelTest {
 
     @Test
     fun saveHabit_withBlankName_showsValidationErrorWithoutWriting() = runTest {
         val habitDao = RecordingHabitDao()
-        val viewModel = HabitViewModel(
+        val viewModel = AddHabitViewModel(
             repository = HabitRepository(habitDao, EmptyRecordDao()),
             dispatcher = StandardTestDispatcher(testScheduler)
         )
@@ -42,7 +42,7 @@ class HabitViewModelTest {
     @Test
     fun saveHabit_withValidName_keepsNavigateBackRequestUntilItIsConsumed() = runTest {
         val habitDao = RecordingHabitDao()
-        val viewModel = HabitViewModel(
+        val viewModel = AddHabitViewModel(
             repository = HabitRepository(habitDao, EmptyRecordDao()),
             dispatcher = StandardTestDispatcher(testScheduler)
         )
@@ -64,7 +64,7 @@ class HabitViewModelTest {
 
     @Test
     fun targetPerWeek_isBoundedBetweenOneAndSeven() = runTest {
-        val viewModel = HabitViewModel(
+        val viewModel = AddHabitViewModel(
             repository = HabitRepository(RecordingHabitDao(), EmptyRecordDao()),
             dispatcher = StandardTestDispatcher(testScheduler)
         )
@@ -80,7 +80,7 @@ class HabitViewModelTest {
 
     @Test
     fun saveHabit_whenWriteFails_keepsNameAndEmitsFailureMessage() = runTest {
-        val viewModel = HabitViewModel(
+        val viewModel = AddHabitViewModel(
             repository = HabitRepository(FailingHabitDao(), EmptyRecordDao()),
             dispatcher = StandardTestDispatcher(testScheduler)
         )

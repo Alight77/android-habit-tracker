@@ -1,9 +1,11 @@
-package com.example.habittracker.viewmodel
+package com.example.habittracker.feature.addhabit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.habittracker.data.local.HabitEntity
 import com.example.habittracker.data.repository.HabitRepository
+import com.example.habittracker.domain.model.WeeklyTargetConstraints.MAX_TARGET_PER_WEEK
+import com.example.habittracker.domain.model.WeeklyTargetConstraints.MIN_TARGET_PER_WEEK
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -15,9 +17,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-const val MIN_TARGET_PER_WEEK = 1
-const val MAX_TARGET_PER_WEEK = 7
 
 data class AddHabitUiState(
     val name: String = "",
@@ -31,7 +30,7 @@ sealed interface AddHabitUiEvent {
     data class SaveFailed(val message: String) : AddHabitUiEvent
 }
 
-class HabitViewModel(
+class AddHabitViewModel(
     private val repository: HabitRepository,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Main.immediate
 ) : ViewModel() {

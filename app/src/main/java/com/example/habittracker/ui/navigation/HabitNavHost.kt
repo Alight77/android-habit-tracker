@@ -9,15 +9,15 @@ import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.habittracker.data.repository.HabitRepository
+import com.example.habittracker.feature.addhabit.AddHabitScreen
+import com.example.habittracker.feature.addhabit.AddHabitViewModel
 import com.example.habittracker.feature.dashboard.DashboardScreen
 import com.example.habittracker.feature.dashboard.DashboardViewModel
+import com.example.habittracker.feature.edit.EditHabitScreen
 import com.example.habittracker.feature.edit.EditHabitViewModel
 import com.example.habittracker.feature.edit.EditHabitViewModelFactory
 import com.example.habittracker.feature.stats.StatsScreen
 import com.example.habittracker.feature.stats.StatsViewModel
-import com.example.habittracker.ui.screen.AddHabitScreen
-import com.example.habittracker.ui.screen.EditHabitScreen
-import com.example.habittracker.viewmodel.HabitViewModel
 
 private const val ROUTE_DASHBOARD = "dashboard"
 private const val ROUTE_ADD_HABIT = "addHabit"
@@ -30,7 +30,7 @@ private fun editHabitRoute(habitId: Int): String = "editHabit/$habitId"
 fun HabitNavHost(
     navController: NavHostController,
     dashboardViewModel: DashboardViewModel,
-    addHabitViewModel: HabitViewModel,
+    addHabitViewModel: AddHabitViewModel,
     statsViewModel: StatsViewModel,
     repository: HabitRepository
 ) {

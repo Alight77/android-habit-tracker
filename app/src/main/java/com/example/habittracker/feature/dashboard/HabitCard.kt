@@ -1,4 +1,4 @@
-package com.example.habittracker.ui.component
+package com.example.habittracker.feature.dashboard
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Box
@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.habittracker.R
 import com.example.habittracker.domain.usecase.RecentGoalProgress
-import com.example.habittracker.feature.dashboard.HabitItemUiState
 import com.example.habittracker.ui.theme.HabitTrackerTheme
 
 @Composable

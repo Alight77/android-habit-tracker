@@ -6,9 +6,9 @@ import com.example.habittracker.data.local.HabitDao
 import com.example.habittracker.data.local.RecordDao
 import com.example.habittracker.data.repository.HabitRepository
 import com.example.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
+import com.example.habittracker.feature.addhabit.AddHabitViewModel
 import com.example.habittracker.feature.dashboard.DashboardViewModel
 import com.example.habittracker.feature.stats.StatsViewModel
-import com.example.habittracker.viewmodel.HabitViewModel
 
 class HabitTrackerViewModelFactory(
     private val repository: HabitRepository,
@@ -20,8 +20,8 @@ class HabitTrackerViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return when {
-            modelClass.isAssignableFrom(HabitViewModel::class.java) -> {
-                HabitViewModel(repository)
+            modelClass.isAssignableFrom(AddHabitViewModel::class.java) -> {
+                AddHabitViewModel(repository)
             }
 
             modelClass.isAssignableFrom(DashboardViewModel::class.java) -> {
