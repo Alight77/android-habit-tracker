@@ -88,10 +88,10 @@ class DashboardViewModelTest {
     }
 
     @Test
-    fun onHabitChecked_updatesGoalProgressOptimistically() = runTest {
+    fun onHabitChecked_updatesGoalProgressAndStreakOptimistically() = runTest {
         val today = LocalDate.of(2026, 9, 19)
         val habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读", targetPerWeek = 3)))
-        val recordDao = TestRecordDao(emptyList())
+        val recordDao = TestRecordDao(listOf(record(1, today.minusDays(1), isDone = true)))
         val persistGate = CompletableDeferred<Unit>()
         val useCase = SetTodayHabitCheckedUseCase(
             applyCommand = {
@@ -114,15 +114,21 @@ class DashboardViewModelTest {
 
         val state = viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
             .first { it.items.single().isDoneToday }
-        assertEquals(RecentGoalProgress(1, 3), state.items.single().goalProgress)
+        assertEquals(RecentGoalProgress(2, 3), state.items.single().goalProgress)
+        assertEquals(2, state.items.single().streak)
         persistGate.complete(Unit)
     }
 
     @Test
-    fun onHabitUnchecked_removesTodayFromGoalProgressOptimistically() = runTest {
+    fun onHabitUnchecked_updatesGoalProgressAndStreakOptimistically() = runTest {
         val today = LocalDate.of(2026, 9, 19)
         val habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读", targetPerWeek = 3)))
-        val recordDao = TestRecordDao(listOf(record(1, today, isDone = true)))
+        val recordDao = TestRecordDao(
+            listOf(
+                record(1, today, isDone = true),
+                record(1, today.minusDays(1), isDone = true)
+            )
+        )
         val persistGate = CompletableDeferred<Unit>()
         val useCase = SetTodayHabitCheckedUseCase(
             applyCommand = {
@@ -146,7 +152,8 @@ class DashboardViewModelTest {
 
         val state = viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
             .first { !it.items.single().isDoneToday }
-        assertEquals(RecentGoalProgress(0, 3), state.items.single().goalProgress)
+        assertEquals(RecentGoalProgress(1, 3), state.items.single().goalProgress)
+        assertEquals(0, state.items.single().streak)
         persistGate.complete(Unit)
     }
 

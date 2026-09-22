@@ -143,16 +143,18 @@ class DashboardViewModel(
                             epochDayToLocalDate(record.date) == today && record.isDone
                         }
                         val mergedDoneToday = optimistic[habit.id] ?: dbDoneToday
-                        val dates = doneRecordsForHabit.map { record -> epochDayToLocalDate(record.date) }
-                        val streak = calculateStreak(dates, today)
-                        val progressDates = dates.filterNot { date -> date == today } +
+                        val persistedDoneDates = doneRecordsForHabit.map { record ->
+                            epochDayToLocalDate(record.date)
+                        }
+                        val effectiveDoneDates = persistedDoneDates.filterNot { date -> date == today } +
                             if (mergedDoneToday) listOf(today) else emptyList()
+                        val streak = calculateStreak(effectiveDoneDates, today)
                         val goalProgress = calculateRecentGoalProgress(
                             targetPerWeek = habit.targetPerWeek,
                             createdDate = Instant.ofEpochMilli(habit.createdAt)
                                 .atZone(zoneId)
                                 .toLocalDate(),
-                            doneDates = progressDates,
+                            doneDates = effectiveDoneDates,
                             today = today
                         )
 
