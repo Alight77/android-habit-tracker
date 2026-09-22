@@ -1,0 +1,101 @@
+package io.github.alight77.habittracker.ui.component
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import io.github.alight77.habittracker.R
+import io.github.alight77.habittracker.domain.model.WeeklyTargetConstraints.MAX_TARGET_PER_WEEK
+import io.github.alight77.habittracker.domain.model.WeeklyTargetConstraints.MIN_TARGET_PER_WEEK
+
+@Composable
+fun HabitFormContent(
+    name: String,
+    targetPerWeek: Int,
+    nameError: String?,
+    isSaving: Boolean,
+    onNameChanged: (String) -> Unit,
+    onDecreaseTarget: () -> Unit,
+    onIncreaseTarget: () -> Unit,
+    onSave: () -> Unit,
+    saveLabel: String
+) {
+    val decreaseTargetContentDescription = stringResource(R.string.decrease_weekly_goal)
+    val increaseTargetContentDescription = stringResource(R.string.increase_weekly_goal)
+
+    Column {
+        OutlinedTextField(
+            value = name,
+            onValueChange = onNameChanged,
+            label = { Text(stringResource(R.string.habit_name)) },
+            isError = nameError != null,
+            supportingText = nameError?.let { message ->
+                { Text(message) }
+            }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(stringResource(R.string.weekly_goal))
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(
+                onClick = onDecreaseTarget,
+                enabled = targetPerWeek > MIN_TARGET_PER_WEEK,
+                modifier = Modifier.semantics {
+                    contentDescription = decreaseTargetContentDescription
+                }
+            ) {
+                Text("−")
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(stringResource(R.string.weekly_goal_value, targetPerWeek))
+            Spacer(modifier = Modifier.width(16.dp))
+
+            OutlinedButton(
+                onClick = onIncreaseTarget,
+                enabled = targetPerWeek < MAX_TARGET_PER_WEEK,
+                modifier = Modifier.semantics {
+                    contentDescription = increaseTargetContentDescription
+                }
+            ) {
+                Text("＋")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = onSave,
+            enabled = !isSaving
+        ) {
+            if (isSaving) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.saving))
+                }
+            } else {
+                Text(saveLabel)
+            }
+        }
+    }
+}

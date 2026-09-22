@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.habittracker"
+    namespace = "io.github.alight77.habittracker"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.habittracker"
+        applicationId = "io.github.alight77.habittracker"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
