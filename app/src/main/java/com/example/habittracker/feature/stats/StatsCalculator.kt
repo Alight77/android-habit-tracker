@@ -2,7 +2,7 @@ package com.example.habittracker.feature.stats
 
 import com.example.habittracker.data.local.HabitEntity
 import com.example.habittracker.data.local.RecordEntity
-import com.example.habittracker.domain.usecase.calculateStreak
+import com.example.habittracker.domain.usecase.calculateLongestStreak
 import com.example.habittracker.domain.usecase.epochDayToLocalDate
 import java.time.LocalDate
 import kotlin.math.roundToInt
@@ -12,7 +12,7 @@ data class StatsSummary(
     val todayDoneCount: Int,
     val totalDoneCount: Int,
     val recentSevenDayCompletionPercent: Int,
-    val bestCurrentStreak: Int
+    val longestStreak: Int
 )
 
 fun calculateStats(
@@ -51,8 +51,8 @@ fun calculateStats(
         keySelector = { (record, _) -> record.habitId },
         valueTransform = { (_, date) -> date }
     )
-    val bestCurrentStreak = habits.maxOfOrNull { habit ->
-        calculateStreak(recordsByHabit[habit.id].orEmpty(), today)
+    val longestStreak = habits.maxOfOrNull { habit ->
+        calculateLongestStreak(recordsByHabit[habit.id].orEmpty())
     } ?: 0
 
     return StatsSummary(
@@ -60,6 +60,6 @@ fun calculateStats(
         todayDoneCount = todayDoneCount,
         totalDoneCount = doneRecords.size,
         recentSevenDayCompletionPercent = recentSevenDayCompletionPercent,
-        bestCurrentStreak = bestCurrentStreak
+        longestStreak = longestStreak
     )
 }

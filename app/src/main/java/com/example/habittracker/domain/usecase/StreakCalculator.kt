@@ -18,3 +18,20 @@ fun calculateStreak(dates: List<LocalDate>, today: LocalDate): Int {
     }
     return streak
 }
+
+fun calculateLongestStreak(dates: List<LocalDate>): Int {
+    val sortedDates = dates.distinct().sorted()
+    if (sortedDates.isEmpty()) return 0
+
+    var longest = 1
+    var current = 1
+    for (index in 1 until sortedDates.size) {
+        current = if (sortedDates[index] == sortedDates[index - 1].plusDays(1)) {
+            current + 1
+        } else {
+            1
+        }
+        longest = maxOf(longest, current)
+    }
+    return longest
+}

@@ -24,7 +24,7 @@ class StatsCalculatorTest {
                 todayDoneCount = 0,
                 totalDoneCount = 0,
                 recentSevenDayCompletionPercent = 0,
-                bestCurrentStreak = 0
+                longestStreak = 0
             ),
             summary
         )
@@ -48,7 +48,7 @@ class StatsCalculatorTest {
                 todayDoneCount = 1,
                 totalDoneCount = 3,
                 recentSevenDayCompletionPercent = 29,
-                bestCurrentStreak = 2
+                longestStreak = 2
             ),
             summary
         )
@@ -76,10 +76,25 @@ class StatsCalculatorTest {
                 todayDoneCount = 2,
                 totalDoneCount = 3,
                 recentSevenDayCompletionPercent = 21,
-                bestCurrentStreak = 2
+                longestStreak = 2
             ),
             summary
         )
+    }
+
+    @Test
+    fun calculateStats_keepsLongestHistoricalStreakWhenTodayIsNotDone() {
+        val today = LocalDate.of(2026, 7, 7)
+        val habits = listOf(habit(id = 1))
+        val records = listOf(
+            doneRecord(habitId = 1, date = today.minusDays(2)),
+            doneRecord(habitId = 1, date = today.minusDays(3)),
+            doneRecord(habitId = 1, date = today.minusDays(4))
+        )
+
+        val summary = calculateStats(habits, records, today)
+
+        assertEquals(3, summary.longestStreak)
     }
 
     private fun habit(id: Int): HabitEntity {

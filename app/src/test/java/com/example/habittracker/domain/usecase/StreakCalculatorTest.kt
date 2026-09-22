@@ -69,4 +69,34 @@ class StreakCalculatorTest {
 
         assertEquals(0, streak)
     }
+
+    @Test
+    fun calculateLongestStreak_returnsZeroForEmptyDates() {
+        assertEquals(0, calculateLongestStreak(emptyList()))
+    }
+
+    @Test
+    fun calculateLongestStreak_usesLongestPastSegmentWithoutToday() {
+        val dates = listOf(
+            LocalDate.of(2026, 7, 2),
+            LocalDate.of(2026, 7, 3),
+            LocalDate.of(2026, 7, 4),
+            LocalDate.of(2026, 7, 6)
+        )
+
+        assertEquals(3, calculateLongestStreak(dates))
+    }
+
+    @Test
+    fun calculateLongestStreak_ignoresDuplicateDatesAndInputOrder() {
+        val dates = listOf(
+            LocalDate.of(2026, 7, 5),
+            LocalDate.of(2026, 7, 3),
+            LocalDate.of(2026, 7, 4),
+            LocalDate.of(2026, 7, 4),
+            LocalDate.of(2026, 7, 1)
+        )
+
+        assertEquals(3, calculateLongestStreak(dates))
+    }
 }

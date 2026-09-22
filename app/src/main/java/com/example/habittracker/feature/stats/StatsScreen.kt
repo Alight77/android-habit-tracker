@@ -110,7 +110,7 @@ private fun StatsSummaryList(
             stringResource(R.string.stats_recent_seven_day_completion),
             "${summary.recentSevenDayCompletionPercent}%"
         ),
-        StatRow(stringResource(R.string.stats_best_streak), summary.bestCurrentStreak.toString()),
+        StatRow(stringResource(R.string.stats_best_streak), summary.longestStreak.toString()),
         StatRow(stringResource(R.string.stats_total_done), summary.totalDoneCount.toString()),
         StatRow(stringResource(R.string.stats_total_habits), summary.totalHabits.toString())
     )
@@ -168,7 +168,7 @@ fun StatsContentPreview() {
                 todayDoneCount = 2,
                 totalDoneCount = 18,
                 recentSevenDayCompletionPercent = 71,
-                bestCurrentStreak = 5
+                longestStreak = 5
             )
         ),
         onBackClick = {},

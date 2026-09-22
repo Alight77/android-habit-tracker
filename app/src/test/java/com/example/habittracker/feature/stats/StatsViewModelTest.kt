@@ -52,7 +52,7 @@ class StatsViewModelTest {
                 todayDoneCount = 1,
                 totalDoneCount = 3,
                 recentSevenDayCompletionPercent = 14,
-                bestCurrentStreak = 1
+                longestStreak = 1
             ),
             state.summary
         )
