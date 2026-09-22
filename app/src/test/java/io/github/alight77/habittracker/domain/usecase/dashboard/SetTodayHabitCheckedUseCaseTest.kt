@@ -4,6 +4,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
@@ -97,6 +99,36 @@ class SetTodayHabitCheckedUseCaseTest {
             ),
             secondEvents.await()
         )
+    }
+
+    @Test
+    fun invoke_whenInFlightCommandIsCancelled_cleansUpSoLaterCommandPersists() = runBlocking {
+        val sourceChecked = MutableStateFlow(false)
+        val firstApplyStarted = CompletableDeferred<Unit>()
+        var applyCount = 0
+        val useCase = SetTodayHabitCheckedUseCase(
+            applyCommand = { command ->
+                applyCount += 1
+                if (applyCount == 1) {
+                    firstApplyStarted.complete(Unit)
+                    awaitCancellation()
+                }
+                sourceChecked.value = command.targetChecked
+                SetTodayHabitCheckedUseCase.ApplyResult.Accepted
+            },
+            observeSourceChecked = { sourceChecked },
+            dispatcher = Dispatchers.Unconfined
+        )
+
+        val cancelledCommand = async(start = CoroutineStart.UNDISPATCHED) {
+            useCase(command(targetChecked = true))
+        }
+        firstApplyStarted.await()
+        cancelledCommand.cancelAndJoin()
+
+        useCase(command(targetChecked = false))
+
+        assertEquals(2, applyCount)
     }
 
     @Test

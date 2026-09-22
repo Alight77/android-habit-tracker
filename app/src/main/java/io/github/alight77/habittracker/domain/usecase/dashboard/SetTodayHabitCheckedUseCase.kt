@@ -3,6 +3,7 @@ package io.github.alight77.habittracker.domain.usecase.dashboard
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -70,27 +71,41 @@ class SetTodayHabitCheckedUseCase(
 
     private suspend fun processQueue(initialCommand: Command) {
         var currentCommand = initialCommand
+        var queueFinished = false
 
-        while (true) {
-            val result = persistAndConfirm(currentCommand)
-            val decision = stateMutex.withLock {
-                val pending = pendingCommand.remove(currentCommand.habitId)
+        try {
+            while (true) {
+                val result = persistAndConfirm(currentCommand)
+                val decision = stateMutex.withLock {
+                    val pending = pendingCommand.remove(currentCommand.habitId)
 
-                if (pending != null) {
-                    optimisticChecked[currentCommand.habitId] = pending.targetChecked
-                    QueueDecision.Continue(pending)
-                } else {
-                    inFlight -= currentCommand.habitId
-                    optimisticChecked -= currentCommand.habitId
-                    QueueDecision.Finish(result.toDomainEvent(currentCommand))
+                    if (pending != null) {
+                        optimisticChecked[currentCommand.habitId] = pending.targetChecked
+                        QueueDecision.Continue(pending)
+                    } else {
+                        inFlight -= currentCommand.habitId
+                        optimisticChecked -= currentCommand.habitId
+                        queueFinished = true
+                        QueueDecision.Finish(result.toDomainEvent(currentCommand))
+                    }
+                }
+
+                when (decision) {
+                    is QueueDecision.Continue -> currentCommand = decision.command
+                    is QueueDecision.Finish -> {
+                        _events.emit(decision.event)
+                        return
+                    }
                 }
             }
-
-            when (decision) {
-                is QueueDecision.Continue -> currentCommand = decision.command
-                is QueueDecision.Finish -> {
-                    _events.emit(decision.event)
-                    return
+        } finally {
+            if (!queueFinished) {
+                withContext(NonCancellable) {
+                    stateMutex.withLock {
+                        inFlight -= initialCommand.habitId
+                        optimisticChecked -= initialCommand.habitId
+                        pendingCommand -= initialCommand.habitId
+                    }
                 }
             }
         }
