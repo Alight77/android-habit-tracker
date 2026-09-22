@@ -51,7 +51,7 @@ class StatsViewModelTest {
                 totalHabits = 2,
                 todayDoneCount = 1,
                 totalDoneCount = 3,
-                recentSevenDayCompletionPercent = 14,
+                recentSevenDayGoalPercent = 14,
                 longestStreak = 1
             ),
             state.summary

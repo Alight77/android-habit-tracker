@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.habittracker.R
+import com.example.habittracker.domain.usecase.RecentGoalProgress
 import com.example.habittracker.ui.component.HabitCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -263,14 +264,16 @@ fun DashboardContentSuccessPreview() {
                 name = "晨练",
                 targetPerWeek = 5,
                 isDoneToday = true,
-                streak = 4
+                streak = 4,
+                goalProgress = RecentGoalProgress(4, 5)
             ),
             HabitItemUiState(
                 id = 2,
                 name = "阅读",
                 targetPerWeek = 7,
                 isDoneToday = false,
-                streak = 0
+                streak = 0,
+                goalProgress = RecentGoalProgress(2, 7)
             )
         )
     )

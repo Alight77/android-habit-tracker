@@ -4,12 +4,14 @@ import com.example.habittracker.data.local.HabitEntity
 import com.example.habittracker.data.local.HabitDao
 import com.example.habittracker.data.local.RecordEntity
 import com.example.habittracker.data.repository.HabitRepository
+import com.example.habittracker.domain.usecase.RecentGoalProgress
 import com.example.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 import com.example.habittracker.testutil.MainDispatcherRule
 import com.example.habittracker.testutil.TestHabitDao
 import com.example.habittracker.testutil.TestRecordDao
 import com.example.habittracker.testutil.ThrowOnceHabitDao
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.filterIsInstance
@@ -23,6 +25,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModelTest {
@@ -58,10 +61,93 @@ class DashboardViewModelTest {
                 name = "阅读",
                 targetPerWeek = 7,
                 isDoneToday = true,
-                streak = 2
+                streak = 2,
+                goalProgress = RecentGoalProgress(2, 7)
             ),
             state.items.single()
         )
+    }
+
+    @Test
+    fun uiState_proratesNewHabitGoalFromCreationDay() = runTest {
+        val today = LocalDate.of(2026, 9, 19)
+        val createdAt = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读", targetPerWeek = 3, createdAt = createdAt)))
+        val recordDao = TestRecordDao(listOf(record(1, today, isDone = true)))
+        val viewModel = DashboardViewModel(
+            habitDao = habitDao,
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
+            setTodayHabitChecked = acceptedUseCase(),
+            todaySource = flowOf(today)
+        )
+
+        val state = viewModel.uiState.filterIsInstance<DashboardUiState.Success>().first()
+
+        assertEquals(RecentGoalProgress(1, 1), state.items.single().goalProgress)
+    }
+
+    @Test
+    fun onHabitChecked_updatesGoalProgressOptimistically() = runTest {
+        val today = LocalDate.of(2026, 9, 19)
+        val habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读", targetPerWeek = 3)))
+        val recordDao = TestRecordDao(emptyList())
+        val persistGate = CompletableDeferred<Unit>()
+        val useCase = SetTodayHabitCheckedUseCase(
+            applyCommand = {
+                persistGate.await()
+                SetTodayHabitCheckedUseCase.ApplyResult.Accepted
+            },
+            observeSourceChecked = { flowOf(true) },
+            dispatcher = mainDispatcherRule.dispatcher
+        )
+        val viewModel = DashboardViewModel(
+            habitDao = habitDao,
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
+            setTodayHabitChecked = useCase,
+            todaySource = flowOf(today)
+        )
+        viewModel.uiState.filterIsInstance<DashboardUiState.Success>().first()
+
+        viewModel.onHabitChecked(habitId = 1, targetChecked = true)
+
+        val state = viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
+            .first { it.items.single().isDoneToday }
+        assertEquals(RecentGoalProgress(1, 3), state.items.single().goalProgress)
+        persistGate.complete(Unit)
+    }
+
+    @Test
+    fun onHabitUnchecked_removesTodayFromGoalProgressOptimistically() = runTest {
+        val today = LocalDate.of(2026, 9, 19)
+        val habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读", targetPerWeek = 3)))
+        val recordDao = TestRecordDao(listOf(record(1, today, isDone = true)))
+        val persistGate = CompletableDeferred<Unit>()
+        val useCase = SetTodayHabitCheckedUseCase(
+            applyCommand = {
+                persistGate.await()
+                SetTodayHabitCheckedUseCase.ApplyResult.Accepted
+            },
+            observeSourceChecked = { flowOf(false) },
+            dispatcher = mainDispatcherRule.dispatcher
+        )
+        val viewModel = DashboardViewModel(
+            habitDao = habitDao,
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
+            setTodayHabitChecked = useCase,
+            todaySource = flowOf(today)
+        )
+        viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
+            .first { it.items.single().isDoneToday }
+
+        viewModel.onHabitChecked(habitId = 1, targetChecked = false)
+
+        val state = viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
+            .first { !it.items.single().isDoneToday }
+        assertEquals(RecentGoalProgress(0, 3), state.items.single().goalProgress)
+        persistGate.complete(Unit)
     }
 
     @Test
@@ -157,13 +243,18 @@ class DashboardViewModelTest {
         )
     }
 
-    private fun habit(id: Int, name: String): HabitEntity {
+    private fun habit(
+        id: Int,
+        name: String,
+        targetPerWeek: Int = 7,
+        createdAt: Long = 0
+    ): HabitEntity {
         return HabitEntity(
             id = id,
             name = name,
             description = "",
-            targetPerWeek = 7,
-            createdAt = 0
+            targetPerWeek = targetPerWeek,
+            createdAt = createdAt
         )
     }
 

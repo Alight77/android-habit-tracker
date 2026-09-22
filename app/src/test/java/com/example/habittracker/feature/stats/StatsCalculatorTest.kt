@@ -5,6 +5,7 @@ import com.example.habittracker.data.local.RecordEntity
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 class StatsCalculatorTest {
 
@@ -23,7 +24,7 @@ class StatsCalculatorTest {
                 totalHabits = 0,
                 todayDoneCount = 0,
                 totalDoneCount = 0,
-                recentSevenDayCompletionPercent = 0,
+                recentSevenDayGoalPercent = 0,
                 longestStreak = 0
             ),
             summary
@@ -47,7 +48,7 @@ class StatsCalculatorTest {
                 totalHabits = 1,
                 todayDoneCount = 1,
                 totalDoneCount = 3,
-                recentSevenDayCompletionPercent = 29,
+                recentSevenDayGoalPercent = 29,
                 longestStreak = 2
             ),
             summary
@@ -75,7 +76,7 @@ class StatsCalculatorTest {
                 totalHabits = 2,
                 todayDoneCount = 2,
                 totalDoneCount = 3,
-                recentSevenDayCompletionPercent = 21,
+                recentSevenDayGoalPercent = 21,
                 longestStreak = 2
             ),
             summary
@@ -97,13 +98,56 @@ class StatsCalculatorTest {
         assertEquals(3, summary.longestStreak)
     }
 
-    private fun habit(id: Int): HabitEntity {
+    @Test
+    fun calculateStats_usesConfiguredWeeklyGoalForSevenDayRate() {
+        val today = LocalDate.of(2026, 7, 7)
+        val summary = calculateStats(
+            habits = listOf(habit(id = 1, targetPerWeek = 3)),
+            records = listOf(
+                doneRecord(1, today),
+                doneRecord(1, today.minusDays(1)),
+                doneRecord(1, today.minusDays(2))
+            ),
+            today = today
+        )
+
+        assertEquals(100, summary.recentSevenDayGoalPercent)
+    }
+
+    @Test
+    fun calculateStats_capsEachHabitBeforeAggregatingGoals() {
+        val today = LocalDate.of(2026, 7, 7)
+        val summary = calculateStats(
+            habits = listOf(habit(id = 1, targetPerWeek = 1), habit(id = 2, targetPerWeek = 3)),
+            records = (0L..4L).map { offset ->
+                doneRecord(1, today.minusDays(offset))
+            },
+            today = today
+        )
+
+        assertEquals(25, summary.recentSevenDayGoalPercent)
+    }
+
+    @Test
+    fun calculateStats_proratesGoalFromCreationDay() {
+        val today = LocalDate.of(2026, 7, 7)
+        val createdAt = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val summary = calculateStats(
+            habits = listOf(habit(id = 1, targetPerWeek = 3, createdAt = createdAt)),
+            records = listOf(doneRecord(1, today)),
+            today = today
+        )
+
+        assertEquals(100, summary.recentSevenDayGoalPercent)
+    }
+
+    private fun habit(id: Int, targetPerWeek: Int = 7, createdAt: Long = 0L): HabitEntity {
         return HabitEntity(
             id = id,
             name = "Habit $id",
             description = "",
-            targetPerWeek = 7,
-            createdAt = 0L
+            targetPerWeek = targetPerWeek,
+            createdAt = createdAt
         )
     }
 

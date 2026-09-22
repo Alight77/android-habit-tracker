@@ -3,15 +3,18 @@ package com.example.habittracker.feature.stats
 import com.example.habittracker.data.local.HabitEntity
 import com.example.habittracker.data.local.RecordEntity
 import com.example.habittracker.domain.usecase.calculateLongestStreak
+import com.example.habittracker.domain.usecase.calculateRecentGoalProgress
 import com.example.habittracker.domain.usecase.epochDayToLocalDate
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.math.roundToInt
 
 data class StatsSummary(
     val totalHabits: Int,
     val todayDoneCount: Int,
     val totalDoneCount: Int,
-    val recentSevenDayCompletionPercent: Int,
+    val recentSevenDayGoalPercent: Int,
     val longestStreak: Int
 )
 
@@ -34,23 +37,27 @@ fun calculateStats(
         .distinct()
         .count()
 
-    val windowStart = today.minusDays(6)
-    val recentDoneHabitDays = doneRecordsWithDates
-        .filter { (_, date) -> !date.isBefore(windowStart) && !date.isAfter(today) }
-        .map { (record, date) -> record.habitId to date }
-        .distinct()
-        .count()
-
-    val recentSevenDayCompletionPercent = if (habits.isEmpty()) {
-        0
-    } else {
-        ((recentDoneHabitDays.toDouble() / (habits.size * 7).toDouble()) * 100).roundToInt()
-    }
-
     val recordsByHabit = doneRecordsWithDates.groupBy(
         keySelector = { (record, _) -> record.habitId },
         valueTransform = { (_, date) -> date }
     )
+    val zoneId = ZoneId.systemDefault()
+    val goalProgress = habits.map { habit ->
+        calculateRecentGoalProgress(
+            targetPerWeek = habit.targetPerWeek,
+            createdDate = Instant.ofEpochMilli(habit.createdAt)
+                .atZone(zoneId)
+                .toLocalDate(),
+            doneDates = recordsByHabit[habit.id].orEmpty(),
+            today = today
+        )
+    }
+    val totalGoal = goalProgress.sumOf { it.target }
+    val recentSevenDayGoalPercent = if (totalGoal == 0) {
+        0
+    } else {
+        (goalProgress.sumOf { it.completed }.toDouble() / totalGoal * 100).roundToInt()
+    }
     val longestStreak = habits.maxOfOrNull { habit ->
         calculateLongestStreak(recordsByHabit[habit.id].orEmpty())
     } ?: 0
@@ -59,7 +66,7 @@ fun calculateStats(
         totalHabits = habits.size,
         todayDoneCount = todayDoneCount,
         totalDoneCount = doneRecords.size,
-        recentSevenDayCompletionPercent = recentSevenDayCompletionPercent,
+        recentSevenDayGoalPercent = recentSevenDayGoalPercent,
         longestStreak = longestStreak
     )
 }

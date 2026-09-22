@@ -27,8 +27,9 @@
     <string name="cancel">取消</string>
     <string name="habit_target_summary">每周目标 %1$d 次</string>
     <string name="habit_streak_summary">连续 %1$d 天</string>
+    <string name="habit_goal_progress">近7天进度 %1$d/%2$d</string>
     <string name="stats_today_done">今日完成</string>
-    <string name="stats_recent_seven_day_completion">近 7 天完成率</string>
+    <string name="stats_recent_seven_day_goal_rate">近 7 天目标达成率</string>
     <string name="stats_best_streak">最长连续打卡</string>
     <string name="stats_total_done">总打卡次数</string>
     <string name="stats_total_habits">习惯数量</string>

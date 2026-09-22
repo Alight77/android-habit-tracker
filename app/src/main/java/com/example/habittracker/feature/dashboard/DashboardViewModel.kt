@@ -6,6 +6,7 @@ import com.example.habittracker.data.local.HabitDao
 import com.example.habittracker.data.local.RecordDao
 import com.example.habittracker.data.repository.HabitRepository
 import com.example.habittracker.domain.usecase.calculateStreak
+import com.example.habittracker.domain.usecase.calculateRecentGoalProgress
 import com.example.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 import com.example.habittracker.domain.usecase.epochDayToLocalDate
 import kotlinx.coroutines.CancellationException
@@ -23,6 +24,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.Instant
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModel(
@@ -131,6 +134,7 @@ class DashboardViewModel(
                     optimisticChecked
                 ) { habits, records, today, optimistic ->
                     val recordsByHabitId = records.groupBy { it.habitId }
+                    val zoneId = ZoneId.systemDefault()
                     val items = habits.map { habit ->
                         val recordsForHabit = recordsByHabitId[habit.id] ?: emptyList()
                         val doneRecordsForHabit = recordsForHabit.filter { it.isDone }
@@ -140,13 +144,24 @@ class DashboardViewModel(
                         val mergedDoneToday = optimistic[habit.id] ?: dbDoneToday
                         val dates = doneRecordsForHabit.map { record -> epochDayToLocalDate(record.date) }
                         val streak = calculateStreak(dates, today)
+                        val progressDates = dates.filterNot { date -> date == today } +
+                            if (mergedDoneToday) listOf(today) else emptyList()
+                        val goalProgress = calculateRecentGoalProgress(
+                            targetPerWeek = habit.targetPerWeek,
+                            createdDate = Instant.ofEpochMilli(habit.createdAt)
+                                .atZone(zoneId)
+                                .toLocalDate(),
+                            doneDates = progressDates,
+                            today = today
+                        )
 
                         HabitItemUiState(
                             habit.id,
                             habit.name,
                             habit.targetPerWeek,
                             mergedDoneToday,
-                            streak
+                            streak,
+                            goalProgress
                         )
                     }
 

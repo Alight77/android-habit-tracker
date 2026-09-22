@@ -40,6 +40,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.habittracker.R
+import com.example.habittracker.domain.usecase.RecentGoalProgress
 import com.example.habittracker.feature.dashboard.HabitItemUiState
 import com.example.habittracker.ui.theme.HabitTrackerTheme
 
@@ -127,6 +128,18 @@ fun HabitCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = stringResource(
+                        R.string.habit_goal_progress,
+                        habit.goalProgress.completed,
+                        habit.goalProgress.target
+                    ),
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.outline,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -208,7 +221,8 @@ fun HabitCardPreview() {
                 name = "晨练",
                 targetPerWeek = 7,
                 isDoneToday = true,
-                streak = 1
+                streak = 1,
+                goalProgress = RecentGoalProgress(4, 7)
             ),
             onCheckClick = {},
             onEditClick = {},
@@ -227,7 +241,8 @@ fun HabitCardLongNamePreview() {
                 name = "通勤时阅读 Android 工程实践文章",
                 targetPerWeek = 7,
                 isDoneToday = false,
-                streak = 12
+                streak = 12,
+                goalProgress = RecentGoalProgress(3, 7)
             ),
             onCheckClick = {},
             onEditClick = {},

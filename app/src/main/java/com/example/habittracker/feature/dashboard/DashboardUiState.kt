@@ -2,6 +2,7 @@ package com.example.habittracker.feature.dashboard
 
 import android.os.Message
 import androidx.compose.runtime.Immutable
+import com.example.habittracker.domain.usecase.RecentGoalProgress
 
 sealed interface  DashboardUiState {
 
@@ -22,5 +23,6 @@ data class HabitItemUiState(
     val name: String,
     val targetPerWeek: Int,
     val isDoneToday: Boolean,
-    val streak: Int
+    val streak: Int,
+    val goalProgress: RecentGoalProgress
 )

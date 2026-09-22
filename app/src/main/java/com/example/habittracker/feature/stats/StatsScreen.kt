@@ -107,8 +107,8 @@ private fun StatsSummaryList(
     val items = listOf(
         StatRow(stringResource(R.string.stats_today_done), "${summary.todayDoneCount} / ${summary.totalHabits}"),
         StatRow(
-            stringResource(R.string.stats_recent_seven_day_completion),
-            "${summary.recentSevenDayCompletionPercent}%"
+            stringResource(R.string.stats_recent_seven_day_goal_rate),
+            "${summary.recentSevenDayGoalPercent}%"
         ),
         StatRow(stringResource(R.string.stats_best_streak), summary.longestStreak.toString()),
         StatRow(stringResource(R.string.stats_total_done), summary.totalDoneCount.toString()),
@@ -167,7 +167,7 @@ fun StatsContentPreview() {
                 totalHabits = 3,
                 todayDoneCount = 2,
                 totalDoneCount = 18,
-                recentSevenDayCompletionPercent = 71,
+                recentSevenDayGoalPercent = 71,
                 longestStreak = 5
             )
         ),

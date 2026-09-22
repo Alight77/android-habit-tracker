@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.habittracker.domain.usecase.RecentGoalProgress
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -32,7 +33,8 @@ class DashboardContentTest {
                             name = "阅读",
                             targetPerWeek = 3,
                             isDoneToday = false,
-                            streak = 0
+                            streak = 0,
+                            goalProgress = RecentGoalProgress(1, 3)
                         )
                     )
                 ),

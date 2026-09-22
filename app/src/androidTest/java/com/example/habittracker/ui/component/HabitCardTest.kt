@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.habittracker.feature.dashboard.HabitItemUiState
+import com.example.habittracker.domain.usecase.RecentGoalProgress
 import com.example.habittracker.ui.theme.HabitTrackerTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -35,7 +36,8 @@ class HabitCardTest {
                         name = "阅读",
                         targetPerWeek = 3,
                         isDoneToday = false,
-                        streak = 2
+                        streak = 2,
+                        goalProgress = RecentGoalProgress(1, 3)
                     ),
                     onCheckClick = {},
                     onEditClick = {},
@@ -75,6 +77,13 @@ class HabitCardTest {
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "已完成"))
     }
 
+    @Test
+    fun cardShowsRecentGoalProgress() {
+        setHabitCardContent(isDoneToday = false)
+
+        composeRule.onNodeWithText("近7天进度 1/3").assertIsDisplayed()
+    }
+
     private fun setHabitCardContent(isDoneToday: Boolean) {
         composeRule.setContent {
             HabitTrackerTheme {
@@ -84,7 +93,8 @@ class HabitCardTest {
                         name = "阅读",
                         targetPerWeek = 3,
                         isDoneToday = isDoneToday,
-                        streak = 2
+                        streak = 2,
+                        goalProgress = RecentGoalProgress(1, 3)
                     ),
                     onCheckClick = {},
                     onEditClick = {},
