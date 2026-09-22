@@ -6,68 +6,23 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.rememberNavController
-import androidx.room.Room
-import com.example.habittracker.data.local.HabitDatabase
-import com.example.habittracker.data.local.HabitDatabaseMigrations
-import com.example.habittracker.data.repository.HabitRepository
-import com.example.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 import com.example.habittracker.feature.addhabit.AddHabitViewModel
 import com.example.habittracker.feature.dashboard.DashboardViewModel
 import com.example.habittracker.feature.stats.StatsViewModel
 import com.example.habittracker.ui.navigation.HabitNavHost
 import com.example.habittracker.ui.theme.HabitTrackerTheme
-import kotlinx.coroutines.flow.map
 
 class MainActivity : ComponentActivity() {
+
+    internal val appContainer: AppContainer
+        get() = (application as HabitTrackerApplication).appContainer
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val db = Room.databaseBuilder(
-            applicationContext,
-            HabitDatabase::class.java,
-            "habits.db"
-        )
-            .addMigrations(
-                HabitDatabaseMigrations.MIGRATION_2_3,
-                HabitDatabaseMigrations.MIGRATION_3_4
-            )
-            .build()
-
-        val repository = HabitRepository(
-            db.habitDao(),
-            db.recordDao()
-        )
-
-        val setTodayHabitCheckedUseCase = SetTodayHabitCheckedUseCase(
-            applyCommand = { command ->
-                val epochDay = command.today.toEpochDay()
-
-                repository.setTodayRecordChecked(
-                    habitId = command.habitId,
-                    epochDay = epochDay,
-                    targetChecked = command.targetChecked
-                )
-
-                SetTodayHabitCheckedUseCase.ApplyResult.Accepted
-            },
-            observeSourceChecked = { command ->
-                val epochDay = command.today.toEpochDay()
-
-                db.recordDao()
-                    .observeRecordByDate(command.habitId, epochDay)
-                    .map { record -> record?.isDone == true }
-            }
-        )
-
-        val viewModelFactory = HabitTrackerViewModelFactory(
-            repository = repository,
-            habitDao = db.habitDao(),
-            recordDao = db.recordDao(),
-            setTodayHabitChecked = setTodayHabitCheckedUseCase
-        )
-        val addHabitViewModel = ViewModelProvider(this, viewModelFactory)[AddHabitViewModel::class.java]
-        val dashboardViewModel = ViewModelProvider(this, viewModelFactory)[DashboardViewModel::class.java]
-        val statsViewModel = ViewModelProvider(this, viewModelFactory)[StatsViewModel::class.java]
+        val addHabitViewModel = ViewModelProvider(this, appContainer.viewModelFactory)[AddHabitViewModel::class.java]
+        val dashboardViewModel = ViewModelProvider(this, appContainer.viewModelFactory)[DashboardViewModel::class.java]
+        val statsViewModel = ViewModelProvider(this, appContainer.viewModelFactory)[StatsViewModel::class.java]
 
         enableEdgeToEdge()
         setContent {
@@ -79,7 +34,7 @@ class MainActivity : ComponentActivity() {
                     dashboardViewModel = dashboardViewModel,
                     addHabitViewModel = addHabitViewModel,
                     statsViewModel = statsViewModel,
-                    repository = repository
+                    repository = appContainer.repository
                 )
             }
         }
