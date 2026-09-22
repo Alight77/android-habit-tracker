@@ -15,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.example.habittracker.R
 import com.example.habittracker.viewmodel.MAX_TARGET_PER_WEEK
@@ -32,6 +34,9 @@ fun HabitFormContent(
     onSave: () -> Unit,
     saveLabel: String
 ) {
+    val decreaseTargetContentDescription = stringResource(R.string.decrease_weekly_goal)
+    val increaseTargetContentDescription = stringResource(R.string.increase_weekly_goal)
+
     Column {
         OutlinedTextField(
             value = name,
@@ -50,7 +55,10 @@ fun HabitFormContent(
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(
                 onClick = onDecreaseTarget,
-                enabled = targetPerWeek > MIN_TARGET_PER_WEEK
+                enabled = targetPerWeek > MIN_TARGET_PER_WEEK,
+                modifier = Modifier.semantics {
+                    contentDescription = decreaseTargetContentDescription
+                }
             ) {
                 Text("−")
             }
@@ -61,7 +69,10 @@ fun HabitFormContent(
 
             OutlinedButton(
                 onClick = onIncreaseTarget,
-                enabled = targetPerWeek < MAX_TARGET_PER_WEEK
+                enabled = targetPerWeek < MAX_TARGET_PER_WEEK,
+                modifier = Modifier.semantics {
+                    contentDescription = increaseTargetContentDescription
+                }
             ) {
                 Text("＋")
             }

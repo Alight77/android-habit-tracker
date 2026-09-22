@@ -22,6 +22,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -50,12 +52,19 @@ fun StatsContent(
     onBackClick: () -> Unit,
     onRetry: () -> Unit
 ) {
+    val backContentDescription = stringResource(R.string.back)
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.statistics)) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.semantics {
+                            contentDescription = backContentDescription
+                        }
+                    ) {
                         Text("‹")
                     }
                 }

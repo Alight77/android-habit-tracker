@@ -3,6 +3,7 @@ package com.example.habittracker.feature.stats
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
@@ -34,5 +35,18 @@ class StatsContentTest {
         }
 
         composeRule.onNodeWithText("近 7 天目标达成率").assertIsDisplayed()
+    }
+
+    @Test
+    fun backButton_exposesContentDescription() {
+        composeRule.setContent {
+            StatsContent(
+                uiState = StatsUiState.Loading,
+                onBackClick = {},
+                onRetry = {}
+            )
+        }
+
+        composeRule.onNodeWithContentDescription("返回").assertIsDisplayed()
     }
 }

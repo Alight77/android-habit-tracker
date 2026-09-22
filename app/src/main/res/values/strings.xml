@@ -6,6 +6,8 @@
     <string name="habit_name">习惯名称</string>
     <string name="weekly_goal">每周目标次数</string>
     <string name="weekly_goal_value">%1$d 次 / 周</string>
+    <string name="decrease_weekly_goal">减少每周目标次数</string>
+    <string name="increase_weekly_goal">增加每周目标次数</string>
     <string name="save">保存</string>
     <string name="save_changes">保存修改</string>
     <string name="saving">保存中…</string>

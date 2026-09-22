@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
@@ -62,17 +63,21 @@ class EditHabitScreenTest {
         }
         val habitId = runBlocking { database.habitDao().getAllHabits().first().single().id }
         val backClickCount = AtomicInteger(0)
+        val viewModel = EditHabitViewModel(
+            repository = HabitRepository(database.habitDao(), database.recordDao()),
+            habitId = habitId
+        )
 
         composeRule.setContent {
             EditHabitScreen(
-                viewModel = EditHabitViewModel(
-                    repository = HabitRepository(database.habitDao(), database.recordDao()),
-                    habitId = habitId
-                ),
+                viewModel = viewModel,
                 onBackClick = { backClickCount.incrementAndGet() }
             )
         }
 
+        composeRule.onNodeWithContentDescription("返回").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("减少每周目标次数").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("增加每周目标次数").assertIsDisplayed()
         composeRule.onNodeWithText("3 次 / 周").assertIsDisplayed()
         composeRule.onNode(hasSetTextAction()).performTextClearance()
         composeRule.onNode(hasSetTextAction()).performTextInput("晨读")
