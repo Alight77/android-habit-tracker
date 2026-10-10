@@ -34,7 +34,9 @@ class DashboardViewModel(
     private val recordDao: RecordDao,
     private val repository: HabitRepository,
     private val setTodayHabitChecked: SetTodayHabitCheckedUseCase,
-    todaySource: Flow<LocalDate> = systemTodayFlow()
+    todaySource: Flow<LocalDate> = systemTodayFlow(),
+    private val currentDate: () -> LocalDate = { LocalDate.now() },
+    private val requestTodayRefresh: () -> Unit = {}
 ) : ViewModel() {
 
     private val todayFlow: StateFlow<LocalDate> = todaySource.stateIn(
@@ -98,8 +100,14 @@ class DashboardViewModel(
     }
 
     fun onHabitChecked(habitId: Int, targetChecked: Boolean) {
+        val today = currentDate()
+        if (today != todayFlow.value) {
+            requestTodayRefresh()
+            _events.tryEmit(DashboardUiEvent.ShowMessage("日期已更新，请重新操作"))
+            return
+        }
+
         viewModelScope.launch {
-            val today = todayFlow.value
             setTodayHabitChecked(
                 SetTodayHabitCheckedUseCase.Command(
                     habitId = habitId,
@@ -108,6 +116,10 @@ class DashboardViewModel(
                 )
             )
         }
+    }
+
+    fun refreshToday() {
+        requestTodayRefresh()
     }
 
     fun deleteHabit(habitId: Int) {

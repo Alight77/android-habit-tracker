@@ -7,6 +7,7 @@ import io.github.alight77.habittracker.testutil.TestHabitDao
 import io.github.alight77.habittracker.testutil.TestRecordDao
 import io.github.alight77.habittracker.testutil.ThrowOnceHabitDao
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -21,6 +22,27 @@ class StatsViewModelTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    @Test
+    fun uiState_updatesTodayCountWhenDateChanges() = runTest {
+        val previousDate = LocalDate.of(2026, 9, 19)
+        val currentDate = previousDate.plusDays(1)
+        val todaySource = MutableStateFlow(previousDate)
+        val viewModel = StatsViewModel(
+            habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读"))),
+            recordDao = TestRecordDao(listOf(record(1, currentDate, isDone = true))),
+            todaySource = todaySource
+        )
+
+        val previous = viewModel.uiState.filterIsInstance<StatsUiState.Success>()
+            .first { it.summary.todayDoneCount == 0 }
+        assertEquals(0, previous.summary.todayDoneCount)
+
+        todaySource.value = currentDate
+        val current = viewModel.uiState.filterIsInstance<StatsUiState.Success>()
+            .first { it.summary.todayDoneCount == 1 }
+        assertEquals(1, current.summary.todayDoneCount)
+    }
 
     @Test
     fun uiState_calculatesSummaryFromDaoFlows() = runTest {

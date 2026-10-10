@@ -21,7 +21,8 @@ import java.time.LocalDate
 class StatsViewModel(
     habitDao: HabitDao,
     recordDao: RecordDao,
-    todaySource: Flow<LocalDate> = systemTodayFlow()
+    todaySource: Flow<LocalDate> = systemTodayFlow(),
+    private val requestTodayRefresh: () -> Unit = {}
 ) : ViewModel() {
 
     private val todayFlow = todaySource.stateIn(
@@ -58,5 +59,9 @@ class StatsViewModel(
 
     fun retry() {
         retryRequest.update { request -> request + 1 }
+    }
+
+    fun refreshToday() {
+        requestTodayRefresh()
     }
 }

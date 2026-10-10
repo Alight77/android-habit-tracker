@@ -28,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
 import io.github.alight77.habittracker.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,6 +39,10 @@ fun StatsScreen(
     onBackClick: () -> Unit
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshToday()
+    }
 
     StatsContent(
         uiState = state,

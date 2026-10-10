@@ -106,7 +106,8 @@ class DashboardViewModelTest {
             recordDao = recordDao,
             repository = HabitRepository(habitDao, recordDao),
             setTodayHabitChecked = useCase,
-            todaySource = flowOf(today)
+            todaySource = flowOf(today),
+            currentDate = { today }
         )
         viewModel.uiState.filterIsInstance<DashboardUiState.Success>().first()
 
@@ -143,7 +144,8 @@ class DashboardViewModelTest {
             recordDao = recordDao,
             repository = HabitRepository(habitDao, recordDao),
             setTodayHabitChecked = useCase,
-            todaySource = flowOf(today)
+            todaySource = flowOf(today),
+            currentDate = { today }
         )
         viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
             .first { it.items.single().isDoneToday }
@@ -176,8 +178,10 @@ class DashboardViewModelTest {
             recordDao = recordDao,
             repository = HabitRepository(habitDao, recordDao),
             setTodayHabitChecked = useCase,
-            todaySource = flowOf(today)
+            todaySource = flowOf(today),
+            currentDate = { today }
         )
+        viewModel.uiState.filterIsInstance<DashboardUiState.Success>().first()
         val event = async(start = CoroutineStart.UNDISPATCHED) {
             withTimeout(2_000L) { viewModel.events.take(1).toList().single() }
         }
@@ -188,6 +192,44 @@ class DashboardViewModelTest {
             DashboardUiEvent.ShowMessage("打卡状态冲突，请重试"),
             event.await()
         )
+    }
+
+    @Test
+    fun onHabitChecked_whenDisplayedDateIsStale_refreshesWithoutWriting() = runTest {
+        val displayedDate = LocalDate.of(2026, 9, 19)
+        val currentDate = displayedDate.plusDays(1)
+        val habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读")))
+        val recordDao = TestRecordDao(listOf(record(1, displayedDate, isDone = true)))
+        val applied = mutableListOf<SetTodayHabitCheckedUseCase.Command>()
+        val useCase = SetTodayHabitCheckedUseCase(
+            applyCommand = { command ->
+                applied += command
+                SetTodayHabitCheckedUseCase.ApplyResult.Accepted
+            },
+            observeSourceChecked = { flowOf(false) },
+            dispatcher = mainDispatcherRule.dispatcher
+        )
+        var refreshCount = 0
+        val viewModel = DashboardViewModel(
+            habitDao = habitDao,
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
+            setTodayHabitChecked = useCase,
+            todaySource = flowOf(displayedDate),
+            currentDate = { currentDate },
+            requestTodayRefresh = { refreshCount++ }
+        )
+        viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
+            .first { it.items.single().isDoneToday }
+        val event = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeout(2_000L) { viewModel.events.take(1).toList().single() }
+        }
+
+        viewModel.onHabitChecked(habitId = 1, targetChecked = false)
+
+        assertEquals(1, refreshCount)
+        assertEquals(DashboardUiEvent.ShowMessage("日期已更新，请重新操作"), event.await())
+        assertEquals(emptyList<SetTodayHabitCheckedUseCase.Command>(), applied)
     }
 
     @Test

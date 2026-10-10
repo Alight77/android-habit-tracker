@@ -6,8 +6,11 @@ import io.github.alight77.habittracker.data.local.HabitDatabase
 import io.github.alight77.habittracker.data.local.HabitDatabaseMigrations
 import io.github.alight77.habittracker.data.repository.HabitRepository
 import io.github.alight77.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
+import io.github.alight77.habittracker.core.time.TodayDateSource
 
 class AppContainer(context: Context) {
+
+    private val todayDateSource = TodayDateSource(context.applicationContext)
 
     private val database = Room.databaseBuilder(
         context.applicationContext,
@@ -46,6 +49,7 @@ class AppContainer(context: Context) {
         repository = repository,
         habitDao = database.habitDao(),
         recordDao = database.recordDao(),
-        setTodayHabitChecked = setTodayHabitCheckedUseCase
+        setTodayHabitChecked = setTodayHabitCheckedUseCase,
+        todayDateSource = todayDateSource
     )
 }
