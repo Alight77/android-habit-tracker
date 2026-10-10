@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.merge
 import java.time.LocalDate
 
+/** 系统变更广播与页面恢复共用的日期刷新入口；接收器只在 dates 被收集时注册。 */
 class TodayDateSource(context: Context) {
     private val applicationContext = context.applicationContext
     private val refreshes = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -36,6 +37,7 @@ class TodayDateSource(context: Context) {
             addAction(Intent.ACTION_TIME_CHANGED)
             addAction(Intent.ACTION_TIMEZONE_CHANGED)
         }
+        // 动态注册随 Flow 订阅而生灭，不在 Manifest 中长期监听系统时间变化。
         context.registerReceiver(receiver, filter)
         awaitClose { context.unregisterReceiver(receiver) }
     }

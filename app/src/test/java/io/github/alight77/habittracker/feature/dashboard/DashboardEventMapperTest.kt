@@ -34,4 +34,16 @@ class DashboardEventMapperTest {
 
         assertEquals("打卡状态冲突，请重试", message)
     }
+
+    @Test
+    fun dashboardMessageFor_explainsCancelledCheckIn() {
+        val event = SetTodayHabitCheckedUseCase.DomainEvent.Reverted(
+            habitId = 1,
+            failedTargetChecked = true,
+            today = LocalDate.of(2026, 7, 7),
+            reason = SetTodayHabitCheckedUseCase.RollbackReason.CANCELLED
+        )
+
+        assertEquals("打卡操作已中断，请重试", dashboardMessageFor(event))
+    }
 }

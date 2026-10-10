@@ -17,8 +17,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
@@ -230,6 +234,54 @@ class DashboardViewModelTest {
         assertEquals(1, refreshCount)
         assertEquals(DashboardUiEvent.ShowMessage("日期已更新，请重新操作"), event.await())
         assertEquals(emptyList<SetTodayHabitCheckedUseCase.Command>(), applied)
+    }
+
+    @Test
+    fun oldDateConfirmationDoesNotClearNewDateOptimisticState() = runTest {
+        val dayA = LocalDate.of(2026, 9, 19)
+        val dayB = dayA.plusDays(1)
+        val today = MutableStateFlow(dayA)
+        val releaseA = CompletableDeferred<Unit>()
+        val releaseB = CompletableDeferred<Unit>()
+        val habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读")))
+        val recordDao = TestRecordDao(emptyList())
+        val useCase = SetTodayHabitCheckedUseCase(
+            applyCommand = { command ->
+                if (command.today == dayA) releaseA.await() else releaseB.await()
+                SetTodayHabitCheckedUseCase.ApplyResult.Accepted
+            },
+            observeSourceChecked = { flowOf(true) },
+            dispatcher = mainDispatcherRule.dispatcher
+        )
+        val viewModel = DashboardViewModel(
+            habitDao = habitDao,
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
+            setTodayHabitChecked = useCase,
+            todaySource = today,
+            currentDate = { today.value }
+        )
+        backgroundScope.launch { viewModel.uiState.collect() }
+        runCurrent()
+
+        viewModel.onHabitChecked(1, true)
+        runCurrent()
+        today.value = dayB
+        runCurrent()
+        viewModel.onHabitChecked(1, true)
+        runCurrent()
+        assertEquals(true, (viewModel.uiState.value as DashboardUiState.Success).items.single().isDoneToday)
+
+        // 旧日期先确认，新日期仍在等待写入；此时今日卡片必须保持新日期的乐观目标。
+        releaseA.complete(Unit)
+        runCurrent()
+        assertEquals(
+            "The old date's Confirmed event must leave today's pending override intact",
+            true,
+            (viewModel.uiState.value as DashboardUiState.Success).items.single().isDoneToday
+        )
+        releaseB.complete(Unit)
+        runCurrent()
     }
 
     @Test

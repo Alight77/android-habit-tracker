@@ -11,6 +11,7 @@ internal fun dashboardMessageFor(event: SetTodayHabitCheckedUseCase.DomainEvent)
         is SetTodayHabitCheckedUseCase.DomainEvent.Reverted -> when (event.reason) {
             SetTodayHabitCheckedUseCase.RollbackReason.PERSIST_FAILED -> "打卡保存失败，请稍后重试"
             SetTodayHabitCheckedUseCase.RollbackReason.CONVERGENCE_TIMEOUT -> "打卡状态同步超时，请重试"
+            SetTodayHabitCheckedUseCase.RollbackReason.CANCELLED -> "打卡操作已中断，请重试"
         }
 
         is SetTodayHabitCheckedUseCase.DomainEvent.Rejected -> when (event.reason) {

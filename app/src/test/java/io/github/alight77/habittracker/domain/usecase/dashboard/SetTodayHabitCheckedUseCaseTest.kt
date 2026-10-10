@@ -188,7 +188,7 @@ class SetTodayHabitCheckedUseCaseTest {
     }
 
     @Test
-    fun invoke_whenPendingCommandCrossesMidnight_persistsLatestCommandDate() = runBlocking {
+    fun invoke_whenPendingCommandCrossesMidnight_persistsBothCommandDates() = runBlocking {
         val sourceChecked = MutableStateFlow(false)
         val firstApplyCanFinish = CompletableDeferred<Unit>()
         val firstApplyStarted = CompletableDeferred<Unit>()
@@ -208,7 +208,7 @@ class SetTodayHabitCheckedUseCaseTest {
             dispatcher = Dispatchers.Unconfined
         )
         val events = async(start = CoroutineStart.UNDISPATCHED) {
-            withTimeout(2_000L) { useCase.events.take(3).toList() }
+            withTimeout(2_000L) { useCase.events.take(4).toList() }
         }
         val firstCommand = async(start = CoroutineStart.UNDISPATCHED) {
             useCase(command(targetChecked = true))
@@ -224,7 +224,8 @@ class SetTodayHabitCheckedUseCaseTest {
         assertEquals(
             listOf(
                 SetTodayHabitCheckedUseCase.DomainEvent.OptimisticApplied(1, true, today),
-                SetTodayHabitCheckedUseCase.DomainEvent.Superseded(1, true, false, nextDay),
+                SetTodayHabitCheckedUseCase.DomainEvent.OptimisticApplied(1, false, nextDay),
+                SetTodayHabitCheckedUseCase.DomainEvent.Confirmed(1, true, today),
                 SetTodayHabitCheckedUseCase.DomainEvent.Confirmed(1, false, nextDay)
             ),
             events.await()
@@ -232,7 +233,7 @@ class SetTodayHabitCheckedUseCaseTest {
     }
 
     @Test
-    fun invoke_whenLatestPendingCommandTimesOut_emitsRevertedWithLatestDate() = runBlocking {
+    fun invoke_whenDifferentDatePendingCommandTimesOut_emitsRevertedWithItsDate() = runBlocking {
         val firstApplyCanFinish = CompletableDeferred<Unit>()
         val firstApplyStarted = CompletableDeferred<Unit>()
         val appliedCommands = mutableListOf<SetTodayHabitCheckedUseCase.Command>()
@@ -251,7 +252,7 @@ class SetTodayHabitCheckedUseCaseTest {
             confirmationTimeoutMillis = 10L
         )
         val events = async(start = CoroutineStart.UNDISPATCHED) {
-            withTimeout(2_000L) { useCase.events.take(3).toList() }
+            withTimeout(2_000L) { useCase.events.take(4).toList() }
         }
         val firstCommand = async(start = CoroutineStart.UNDISPATCHED) {
             useCase(command(targetChecked = true))
@@ -276,7 +277,7 @@ class SetTodayHabitCheckedUseCaseTest {
     }
 
     @Test
-    fun invoke_whenLatestPendingCommandPersistenceFails_emitsRevertedWithLatestDate() = runBlocking {
+    fun invoke_whenDifferentDatePendingCommandPersistenceFails_emitsRevertedWithItsDate() = runBlocking {
         val sourceChecked = MutableStateFlow(false)
         val firstApplyCanFinish = CompletableDeferred<Unit>()
         val firstApplyStarted = CompletableDeferred<Unit>()
@@ -298,7 +299,7 @@ class SetTodayHabitCheckedUseCaseTest {
             dispatcher = Dispatchers.Unconfined
         )
         val events = async(start = CoroutineStart.UNDISPATCHED) {
-            withTimeout(2_000L) { useCase.events.take(3).toList() }
+            withTimeout(2_000L) { useCase.events.take(4).toList() }
         }
         val firstCommand = async(start = CoroutineStart.UNDISPATCHED) {
             useCase(command(targetChecked = true))
