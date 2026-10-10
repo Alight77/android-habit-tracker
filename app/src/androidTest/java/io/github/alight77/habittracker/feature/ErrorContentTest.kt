@@ -27,7 +27,7 @@ class ErrorContentTest {
         composeRule.setContent {
             DashboardContent(
                 uiState = DashboardUiState.Error("加载习惯数据失败，请重试"),
-                onCheckClick = { _, _ -> },
+                onCheckClick = { _ -> },
                 onAddClick = {},
                 onStatsClick = {},
                 onEditClick = {},

@@ -12,6 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.LocalDate
 import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(AndroidJUnit4::class)
@@ -36,9 +37,10 @@ class DashboardContentTest {
                             streak = 0,
                             goalProgress = RecentGoalProgress(1, 3)
                         )
-                    )
+                    ),
+                    today = LocalDate.of(2026, 9, 19)
                 ),
-                onCheckClick = { _, _ -> },
+                onCheckClick = { _ -> },
                 onAddClick = {},
                 onStatsClick = {},
                 onEditClick = { editedHabitId.set(it) },
@@ -65,8 +67,8 @@ class DashboardContentTest {
         val addClickCount = AtomicInteger(0)
         composeRule.setContent {
             DashboardContent(
-                uiState = DashboardUiState.Success(emptyList()),
-                onCheckClick = { _, _ -> },
+                uiState = DashboardUiState.Success(emptyList(), LocalDate.of(2026, 9, 19)),
+                onCheckClick = { _ -> },
                 onAddClick = { addClickCount.incrementAndGet() },
                 onStatsClick = {},
                 onEditClick = {},

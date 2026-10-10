@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import java.time.LocalDate
 import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.domain.usecase.RecentGoalProgress
 
@@ -70,9 +71,7 @@ fun DashboardScreen(
     DashboardScaffold(
         uiState = state,
         snackbarHostState = snackbarHostState,
-        onCheckClick = { habitId, targetChecked ->
-            viewModel.onHabitChecked(habitId, targetChecked)
-        },
+        onCheckClick = viewModel::onHabitToggle,
         onAddClick = onAddClick,
         onStatsClick = onStatsClick,
         onEditClick = onEditClick,
@@ -86,7 +85,7 @@ fun DashboardScreen(
 private fun DashboardScaffold(
     uiState: DashboardUiState,
     snackbarHostState: SnackbarHostState?,
-    onCheckClick: (Int, Boolean) -> Unit,
+    onCheckClick: (Int) -> Unit,
     onAddClick: () -> Unit,
     onStatsClick: () -> Unit,
     onEditClick: (Int) -> Unit,
@@ -137,7 +136,7 @@ private fun DashboardScaffold(
 @Composable
 fun DashboardContent(
     uiState: DashboardUiState,
-    onCheckClick: (Int, Boolean) -> Unit,
+    onCheckClick: (Int) -> Unit,
     onAddClick: () -> Unit,
     onStatsClick: () -> Unit,
     onEditClick: (Int) -> Unit,
@@ -159,7 +158,7 @@ fun DashboardContent(
 @Composable
 private fun DashboardBody(
     uiState: DashboardUiState,
-    onCheckClick: (Int, Boolean) -> Unit,
+    onCheckClick: (Int) -> Unit,
     onEditClick: (Int) -> Unit,
     onDeleteHabit: (Int) -> Unit,
     onRetry: () -> Unit,
@@ -205,7 +204,8 @@ private fun DashboardBody(
                     ) { item ->
                         HabitCard(
                             habit = item,
-                            onCheckClick = { onCheckClick(item.id, !item.isDoneToday) },
+                            // 卡片只上报点击；目标由 ViewModel 根据最新意图同步计算。
+                            onCheckClick = { onCheckClick(item.id) },
                             onEditClick = { onEditClick(item.id) },
                             onDeleteClick = { habitPendingDeletion = item }
                         )
@@ -279,12 +279,13 @@ fun DashboardContentSuccessPreview() {
                 streak = 0,
                 goalProgress = RecentGoalProgress(2, 7)
             )
-        )
+        ),
+        today = LocalDate.now()
     )
 
     DashboardContent(
         uiState = previewState,
-        onCheckClick = { _, _ -> },
+        onCheckClick = { _ -> },
         onAddClick = {},
         onStatsClick = {},
         onEditClick = {},
@@ -297,8 +298,8 @@ fun DashboardContentSuccessPreview() {
 @Composable
 fun DashboardContentEmptyPreview() {
     DashboardContent(
-        uiState = DashboardUiState.Success(emptyList()),
-        onCheckClick = { _, _ -> },
+        uiState = DashboardUiState.Success(emptyList(), LocalDate.now()),
+        onCheckClick = { _ -> },
         onAddClick = {},
         onStatsClick = {},
         onEditClick = {},
@@ -312,7 +313,7 @@ fun DashboardContentEmptyPreview() {
 fun DashboardContentLoadingPreview() {
     DashboardContent(
         uiState = DashboardUiState.Loading,
-        onCheckClick = { _, _ -> },
+        onCheckClick = { _ -> },
         onAddClick = {},
         onStatsClick = {},
         onEditClick = {},
@@ -326,7 +327,7 @@ fun DashboardContentLoadingPreview() {
 fun DashboardContentErrorPreview() {
     DashboardContent(
         uiState = DashboardUiState.Error("Failed to load habits"),
-        onCheckClick = { _, _ -> },
+        onCheckClick = { _ -> },
         onAddClick = {},
         onStatsClick = {},
         onEditClick = {},

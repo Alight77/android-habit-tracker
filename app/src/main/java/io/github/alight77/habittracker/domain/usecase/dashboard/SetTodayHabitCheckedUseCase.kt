@@ -19,6 +19,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
+import java.util.concurrent.atomic.AtomicLong
 
 class SetTodayHabitCheckedUseCase(
     private val applyCommand: suspend (Command) -> ApplyResult,
@@ -28,6 +29,7 @@ class SetTodayHabitCheckedUseCase(
 ) {
 
     private val stateMutex = Mutex()
+    private val intentIds = AtomicLong()
     // 调用方协程取消后，已入队命令和事件投递由应用级 UseCase 接管；进程死亡不在此保证范围内。
     private val recoveryScope = CoroutineScope(SupervisorJob() + dispatcher)
     private val _events = MutableSharedFlow<DomainEvent>(
@@ -50,39 +52,45 @@ class SetTodayHabitCheckedUseCase(
 
     val events: SharedFlow<DomainEvent> = _events.asSharedFlow()
 
-    suspend operator fun invoke(command: Command) {
-        withContext(dispatcher) {
-            val admission = updateStateAndEmit {
-                val key = command.habitId to command.today
-                val oldTargetChecked = optimisticChecked.put(key, command.targetChecked)
-                val result = if (command.habitId in inFlight) {
-                    pendingCommand.getOrPut(command.habitId) { linkedMapOf() }[command.today] = command
-                    QueueAdmission(
-                        // 新日期是独立操作，只有同日期已有目标时才算 Superseded。
-                        event = if (oldTargetChecked == null) {
-                            DomainEvent.OptimisticApplied(command.habitId, command.targetChecked, command.today)
-                        } else {
-                            DomainEvent.Superseded(
-                                command.habitId, oldTargetChecked, command.targetChecked, command.today
-                            )
-                        },
-                        startsQueue = false
-                    )
-                } else {
-                    inFlight += command.habitId
-                    QueueAdmission(
-                        event = DomainEvent.OptimisticApplied(
-                            command.habitId, command.targetChecked, command.today
-                        ),
-                        startsQueue = true
-                    )
-                }
-                result to result.event
-            }
+    /** 应用级递增序号让重建后的 ViewModel 也能识别先前命令的延迟事件。 */
+    fun nextIntentId(): Long = intentIds.incrementAndGet()
 
-            if (admission.startsQueue) {
-                processQueue(command)
+    suspend operator fun invoke(command: Command) {
+        // 点击协程在切换 IO 前先入队；同一主线程发出的连续意图因此按点击顺序进入状态锁。
+        val admission = updateStateAndEmit {
+            val key = command.habitId to command.today
+            val oldTargetChecked = optimisticChecked.put(key, command.targetChecked)
+            val result = if (command.habitId in inFlight) {
+                pendingCommand.getOrPut(command.habitId) { linkedMapOf() }[command.today] = command
+                QueueAdmission(
+                    // 新日期是独立操作，只有同日期已有目标时才算 Superseded。
+                    event = if (oldTargetChecked == null) {
+                        DomainEvent.OptimisticApplied(
+                            command.habitId, command.targetChecked, command.today, command.intentId
+                        )
+                    } else {
+                        DomainEvent.Superseded(
+                            command.habitId, oldTargetChecked, command.targetChecked,
+                            command.today, command.intentId
+                        )
+                    },
+                    startsQueue = false
+                )
+            } else {
+                inFlight += command.habitId
+                QueueAdmission(
+                    event = DomainEvent.OptimisticApplied(
+                        command.habitId, command.targetChecked, command.today, command.intentId
+                    ),
+                    startsQueue = true
+                )
             }
+            result to result.event
+        }
+
+        if (admission.startsQueue) {
+            // 队列循环必须在调用方取消前进入 try/finally，避免入队后切换线程时遗留 inFlight。
+            processQueue(command)
         }
     }
 
@@ -130,7 +138,7 @@ class SetTodayHabitCheckedUseCase(
                             optimisticChecked.remove(habitId to currentCommand.today)
                             DomainEvent.Reverted(
                                 habitId, currentCommand.targetChecked, currentCommand.today,
-                                RollbackReason.CANCELLED
+                                RollbackReason.CANCELLED, currentCommand.intentId
                             )
                         }
                         val next = takeNextPending(habitId)
@@ -165,25 +173,26 @@ class SetTodayHabitCheckedUseCase(
             result
         }
 
-    private suspend fun persistAndConfirm(command: Command): ProcessResult {
-        return try {
-            when (val result = applyCommand(command)) {
-                ApplyResult.Accepted -> {
-                    if (awaitSourceConfirmed(command)) {
-                        ProcessResult.Confirmed
-                    } else {
-                        ProcessResult.Reverted(RollbackReason.CONVERGENCE_TIMEOUT)
+    private suspend fun persistAndConfirm(command: Command): ProcessResult =
+        withContext(dispatcher) {
+            try {
+                when (val result = applyCommand(command)) {
+                    ApplyResult.Accepted -> {
+                        if (awaitSourceConfirmed(command)) {
+                            ProcessResult.Confirmed
+                        } else {
+                            ProcessResult.Reverted(RollbackReason.CONVERGENCE_TIMEOUT)
+                        }
                     }
-                }
 
-                is ApplyResult.Rejected -> ProcessResult.Rejected(result.reason)
+                    is ApplyResult.Rejected -> ProcessResult.Rejected(result.reason)
+                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Throwable) {
+                ProcessResult.Reverted(RollbackReason.PERSIST_FAILED)
             }
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (_: Throwable) {
-            ProcessResult.Reverted(RollbackReason.PERSIST_FAILED)
         }
-    }
 
     private suspend fun awaitSourceConfirmed(command: Command): Boolean {
         return try {
@@ -203,21 +212,24 @@ class SetTodayHabitCheckedUseCase(
             ProcessResult.Confirmed -> DomainEvent.Confirmed(
                 habitId = command.habitId,
                 targetChecked = command.targetChecked,
-                today = command.today
+                today = command.today,
+                intentId = command.intentId
             )
 
             is ProcessResult.Reverted -> DomainEvent.Reverted(
                 habitId = command.habitId,
                 failedTargetChecked = command.targetChecked,
                 today = command.today,
-                reason = reason
+                reason = reason,
+                intentId = command.intentId
             )
 
             is ProcessResult.Rejected -> DomainEvent.Rejected(
                 habitId = command.habitId,
                 targetChecked = command.targetChecked,
                 today = command.today,
-                reason = reason
+                reason = reason,
+                intentId = command.intentId
             )
         }
     }
@@ -225,41 +237,47 @@ class SetTodayHabitCheckedUseCase(
     data class Command(
         val habitId: Int,
         val targetChecked: Boolean,
-        val today: LocalDate
+        val today: LocalDate,
+        val intentId: Long = 0L
     )
 
     sealed interface DomainEvent {
         data class OptimisticApplied(
             val habitId: Int,
             val targetChecked: Boolean,
-            val today: LocalDate
+            val today: LocalDate,
+            val intentId: Long = 0L
         ) : DomainEvent
 
         data class Confirmed(
             val habitId: Int,
             val targetChecked: Boolean,
-            val today: LocalDate
+            val today: LocalDate,
+            val intentId: Long = 0L
         ) : DomainEvent
 
         data class Superseded(
             val habitId: Int,
             val oldTargetChecked: Boolean,
             val newTargetChecked: Boolean,
-            val today: LocalDate
+            val today: LocalDate,
+            val intentId: Long = 0L
         ) : DomainEvent
 
         data class Reverted(
             val habitId: Int,
             val failedTargetChecked: Boolean,
             val today: LocalDate,
-            val reason: RollbackReason
+            val reason: RollbackReason,
+            val intentId: Long = 0L
         ) : DomainEvent
 
         data class Rejected(
             val habitId: Int,
             val targetChecked: Boolean,
             val today: LocalDate,
-            val reason: RejectionReason
+            val reason: RejectionReason,
+            val intentId: Long = 0L
         ) : DomainEvent
     }
 

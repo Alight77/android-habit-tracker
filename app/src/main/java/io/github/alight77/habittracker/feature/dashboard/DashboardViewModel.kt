@@ -11,6 +11,7 @@ import io.github.alight77.habittracker.domain.usecase.calculateRecentGoalProgres
 import io.github.alight77.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 import io.github.alight77.habittracker.domain.usecase.epochDayToLocalDate
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -48,8 +49,9 @@ class DashboardViewModel(
     private val recordsFlow = recordDao.getAllRecords()
     private val habitsFlow = habitDao.getAllHabits()
 
-    // 旧日期的终态事件只能清理旧日期目标，不能清除跨午夜后今日的乐观状态。
-    private val optimisticChecked = MutableStateFlow<Map<Pair<Int, LocalDate>, Boolean>>(emptyMap())
+    // 本地点击目标同步保留到失败或日期切换，防止 Room 已提交但 Compose 尚未重组时读回旧值。
+    private val optimisticChecked =
+        MutableStateFlow<Map<Pair<Int, LocalDate>, CheckedOverride>>(emptyMap())
     private val retryRequest = MutableStateFlow(0)
     private val _events = MutableSharedFlow<DashboardUiEvent>(extraBufferCapacity = 1)
 
@@ -60,35 +62,31 @@ class DashboardViewModel(
             setTodayHabitChecked.events.collect { event ->
                 when (event) {
                     is SetTodayHabitCheckedUseCase.DomainEvent.OptimisticApplied -> {
-                        optimisticChecked.update {
-                            it + ((event.habitId to event.today) to event.targetChecked)
-                        }
+                        applyOptimisticEvent(
+                            event.habitId, event.today, event.targetChecked, event.intentId
+                        )
                     }
 
                     is SetTodayHabitCheckedUseCase.DomainEvent.Confirmed -> {
-                        optimisticChecked.update {
-                            it - (event.habitId to event.today)
-                        }
+                        clearOptimisticEvent(event.habitId, event.today, event.intentId, failed = false)
                     }
 
                     is SetTodayHabitCheckedUseCase.DomainEvent.Reverted -> {
-                        optimisticChecked.update {
-                            it - (event.habitId to event.today)
+                        if (clearOptimisticEvent(event.habitId, event.today, event.intentId, failed = true)) {
+                            emitFailureMessage(event)
                         }
-                        emitFailureMessage(event)
                     }
 
                     is SetTodayHabitCheckedUseCase.DomainEvent.Superseded -> {
-                        optimisticChecked.update {
-                            it + ((event.habitId to event.today) to event.newTargetChecked)
-                        }
+                        applyOptimisticEvent(
+                            event.habitId, event.today, event.newTargetChecked, event.intentId
+                        )
                     }
 
                     is SetTodayHabitCheckedUseCase.DomainEvent.Rejected -> {
-                        optimisticChecked.update {
-                            it - (event.habitId to event.today)
+                        if (clearOptimisticEvent(event.habitId, event.today, event.intentId, failed = true)) {
+                            emitFailureMessage(event)
                         }
-                        emitFailureMessage(event)
                     }
                 }
             }
@@ -100,22 +98,84 @@ class DashboardViewModel(
         _events.emit(DashboardUiEvent.ShowMessage(message))
     }
 
-    fun onHabitChecked(habitId: Int, targetChecked: Boolean) {
+    private fun applyOptimisticEvent(
+        habitId: Int,
+        date: LocalDate,
+        targetChecked: Boolean,
+        intentId: Long
+    ) {
+        val key = habitId to date
+        optimisticChecked.update { current ->
+            val latest = current[key]
+            // 延迟到达的旧事件不能覆盖主线程刚记录的更新点击意图。
+            if (latest != null && latest.intentId >= intentId) current
+            else current + (key to CheckedOverride(targetChecked, intentId, retainUntilDateChange = false))
+        }
+    }
+
+    private suspend fun clearOptimisticEvent(
+        habitId: Int,
+        date: LocalDate,
+        intentId: Long,
+        failed: Boolean
+    ): Boolean {
+        val key = habitId to date
+        val tracked = optimisticChecked.value[key]
+        // ViewModel 重建后可能没收到旧的 OptimisticApplied；当日有效失败仍须提示。
+        if (tracked == null) return failed && date == todayFlow.value && date == currentDate()
+        if (tracked.intentId != intentId) return false
+        val persistedChecked = if (failed) {
+            try {
+                // 失败后的单条 Room 查询可先于仪表盘全量 Flow 返回，避免下一次点击读到旧页面快照。
+                recordDao.getRecordByDate(habitId, date.toEpochDay())?.isDone == true
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                null
+            }
+        } else null
+        while (true) {
+            val current = optimisticChecked.value
+            val latest = current[key]
+            // 读库可能挂起；只允许仍是当前意图的失败事件回滚并提示。
+            if (latest?.intentId != intentId) return false
+            val updated = when {
+                !failed && latest.retainUntilDateChange -> current
+                failed && persistedChecked != null -> current + (
+                    key to latest.copy(
+                        targetChecked = persistedChecked,
+                        retainUntilDateChange = true
+                    )
+                )
+                else -> current - key
+            }
+            if (optimisticChecked.compareAndSet(current, updated)) return true
+        }
+    }
+
+    fun onHabitToggle(habitId: Int) {
         val today = currentDate()
-        // 页面日期尚未收敛时拒绝本次点击，避免向昨天的 Room 记录写入今日意图。
-        if (today != todayFlow.value) {
+        val displayedState = uiState.value as? DashboardUiState.Success
+        // 日期流可能先于 UI StateFlow 更新；必须核对生成卡片状态的日期，再读取点击基线。
+        if (today != todayFlow.value || (displayedState != null && displayedState.today != today)) {
             requestTodayRefresh()
             _events.tryEmit(DashboardUiEvent.ShowMessage("日期已更新，请重新操作"))
             return
         }
 
-        viewModelScope.launch {
+        val key = habitId to today
+        val visibleChecked = displayedState?.items?.firstOrNull { it.id == habitId }
+            ?.isDoneToday ?: return
+        val targetChecked = !(optimisticChecked.value[key]?.targetChecked ?: visibleChecked)
+        val intentId = setTodayHabitChecked.nextIntentId()
+        // 点击处理在主线程无挂起地更新目标；事件收集、IO 调度和 Compose 重组均可晚于下一次点击。
+        optimisticChecked.update { current ->
+            current.filter { (dateKey, value) ->
+                dateKey.second == today || !value.retainUntilDateChange
+            } + (key to CheckedOverride(targetChecked, intentId, retainUntilDateChange = true))
+        }
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
             setTodayHabitChecked(
-                SetTodayHabitCheckedUseCase.Command(
-                    habitId = habitId,
-                    targetChecked = targetChecked,
-                    today = today
-                )
+                SetTodayHabitCheckedUseCase.Command(habitId, targetChecked, today, intentId)
             )
         }
     }
@@ -128,6 +188,9 @@ class DashboardViewModel(
         viewModelScope.launch {
             try {
                 repository.deleteHabitById(habitId)
+                optimisticChecked.update { current ->
+                    current.filterKeys { key -> key.first != habitId }
+                }
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 _events.emit(DashboardUiEvent.ShowMessage("删除习惯失败，请稍后重试"))
@@ -156,7 +219,7 @@ class DashboardViewModel(
                         val dbDoneToday = recordsForHabit.any { record ->
                             epochDayToLocalDate(record.date) == today && record.isDone
                         }
-                        val mergedDoneToday = optimistic[habit.id to today] ?: dbDoneToday
+                        val mergedDoneToday = optimistic[habit.id to today]?.targetChecked ?: dbDoneToday
                         val persistedDoneDates = doneRecordsForHabit.map { record ->
                             epochDayToLocalDate(record.date)
                         }
@@ -182,7 +245,7 @@ class DashboardViewModel(
                         )
                     }
 
-                    val state: DashboardUiState = DashboardUiState.Success(items)
+                    val state: DashboardUiState = DashboardUiState.Success(items, today)
                     state
                 }.catch {
                     emit(DashboardUiState.Error("加载习惯数据失败，请重试"))
@@ -193,4 +256,10 @@ class DashboardViewModel(
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = DashboardUiState.Loading
             )
+
+    private data class CheckedOverride(
+        val targetChecked: Boolean,
+        val intentId: Long,
+        val retainUntilDateChange: Boolean
+    )
 }

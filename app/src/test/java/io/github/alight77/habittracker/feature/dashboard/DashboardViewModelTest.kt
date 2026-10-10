@@ -115,7 +115,7 @@ class DashboardViewModelTest {
         )
         viewModel.uiState.filterIsInstance<DashboardUiState.Success>().first()
 
-        viewModel.onHabitChecked(habitId = 1, targetChecked = true)
+        viewModel.onHabitToggle(habitId = 1)
 
         val state = viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
             .first { it.items.single().isDoneToday }
@@ -154,7 +154,7 @@ class DashboardViewModelTest {
         viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
             .first { it.items.single().isDoneToday }
 
-        viewModel.onHabitChecked(habitId = 1, targetChecked = false)
+        viewModel.onHabitToggle(habitId = 1)
 
         val state = viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
             .first { !it.items.single().isDoneToday }
@@ -190,7 +190,7 @@ class DashboardViewModelTest {
             withTimeout(2_000L) { viewModel.events.take(1).toList().single() }
         }
 
-        viewModel.onHabitChecked(habitId = 1, targetChecked = true)
+        viewModel.onHabitToggle(habitId = 1)
 
         assertEquals(
             DashboardUiEvent.ShowMessage("打卡状态冲突，请重试"),
@@ -229,7 +229,7 @@ class DashboardViewModelTest {
             withTimeout(2_000L) { viewModel.events.take(1).toList().single() }
         }
 
-        viewModel.onHabitChecked(habitId = 1, targetChecked = false)
+        viewModel.onHabitToggle(habitId = 1)
 
         assertEquals(1, refreshCount)
         assertEquals(DashboardUiEvent.ShowMessage("日期已更新，请重新操作"), event.await())
@@ -264,11 +264,11 @@ class DashboardViewModelTest {
         backgroundScope.launch { viewModel.uiState.collect() }
         runCurrent()
 
-        viewModel.onHabitChecked(1, true)
+        viewModel.onHabitToggle(1)
         runCurrent()
         today.value = dayB
         runCurrent()
-        viewModel.onHabitChecked(1, true)
+        viewModel.onHabitToggle(1)
         runCurrent()
         assertEquals(true, (viewModel.uiState.value as DashboardUiState.Success).items.single().isDoneToday)
 
