@@ -77,7 +77,8 @@ fun HabitCard(
     )
     val buttonContainerColor by animateColorAsState(
         targetValue = if (habit.isDoneToday) {
-            MaterialTheme.colorScheme.secondaryContainer
+            // 完成卡片保留柔和底色，按钮单独使用砖红色，确保白字清晰可读。
+            MaterialTheme.colorScheme.tertiary
         } else {
             MaterialTheme.colorScheme.primary
         },
@@ -90,7 +91,10 @@ fun HabitCard(
             .padding(top = 6.dp, start = 12.dp, end = 12.dp, bottom = 6.dp),
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors = CardDefaults.cardColors(containerColor = cardContainerColor)
+        colors = CardDefaults.cardColors(
+            containerColor = cardContainerColor,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
     ) {
         Row(
             modifier = Modifier
@@ -187,7 +191,7 @@ fun HabitCard(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = buttonContainerColor,
                         contentColor = if (habit.isDoneToday) {
-                            MaterialTheme.colorScheme.onSecondaryContainer
+                            MaterialTheme.colorScheme.onTertiary
                         } else {
                             MaterialTheme.colorScheme.onPrimary
                         }

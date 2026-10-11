@@ -116,7 +116,9 @@ private fun DashboardScaffold(
                 modifier = Modifier.semantics {
                     contentDescription = addHabitContentDescription
                 },
-                onClick = onAddClick
+                onClick = onAddClick,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 Text("+")
             }
