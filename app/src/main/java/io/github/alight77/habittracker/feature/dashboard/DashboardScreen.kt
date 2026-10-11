@@ -2,10 +2,12 @@ package io.github.alight77.habittracker.feature.dashboard
 
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -37,6 +39,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,9 +49,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -56,6 +68,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,6 +80,9 @@ import androidx.lifecycle.repeatOnLifecycle
 import java.time.LocalDate
 import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.ui.theme.HabitTrackerTheme
+import io.github.alight77.habittracker.ui.theme.WarmPaperMiddle
+import io.github.alight77.habittracker.ui.theme.WarmPaperBottom
+import io.github.alight77.habittracker.ui.theme.WarmPaperTop
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,45 +135,108 @@ private fun DashboardScaffold(
     onRetry: () -> Unit
 ) {
     val addHabitContentDescription = stringResource(R.string.add_habit)
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
-                actions = {
-                    TextButton(onClick = onStatsClick) {
-                        Text(stringResource(R.string.statistics))
-                    }
-                }
-            )
-        },
-        snackbarHost = {
-            if (snackbarHostState != null) {
-                SnackbarHost(snackbarHostState)
-            }
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                modifier = Modifier.semantics {
-                    contentDescription = addHabitContentDescription
-                },
-                onClick = onAddClick,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Text("+")
-            }
-        },
-        contentWindowInsets = WindowInsets.systemBars
-    ) { padding ->
-        DashboardBody(
-            uiState = uiState,
-            onCheckClick = onCheckClick,
-            onEditClick = onEditClick,
-            onDeleteHabit = onDeleteHabit,
-            onRetry = onRetry,
-            modifier = Modifier.padding(padding)
+    val colors = MaterialTheme.colorScheme
+    val showArtwork = colors.background.luminance() > 0.5f && LocalDensity.current.fontScale < 1.5f
+    val backgroundBrush = if (showArtwork) {
+        Brush.verticalGradient(
+            0f to WarmPaperTop,
+            0.50f to WarmPaperMiddle,
+            0.74f to colors.background,
+            1f to WarmPaperBottom
         )
+    } else {
+        Brush.verticalGradient(listOf(colors.background, colors.surface))
+    }
+
+    Box(Modifier.fillMaxSize().background(backgroundBrush)) {
+        if (showArtwork) {
+            // 页头插画是轻量背景资源；日期、寄语和操作始终由 Compose 绘制。
+            Image(
+                painter = painterResource(R.drawable.dashboard_sunny_header),
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                    .drawWithContent {
+                        drawContent()
+                        // 末端逐渐透明，让水彩插画自然落到 Compose 背景渐变上。
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                0f to Color.White,
+                                0.72f to Color.White,
+                                1f to Color.Transparent
+                            ),
+                            blendMode = BlendMode.DstIn
+                        )
+                    }
+                    .align(Alignment.TopCenter)
+            )
+        }
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(R.string.dashboard_title),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = if (LocalDensity.current.fontScale >= 1.5f) 18.sp else 24.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    actions = {
+                        TextButton(onClick = onStatsClick) {
+                            Text(
+                                text = stringResource(R.string.statistics),
+                                color = colors.primary,
+                                modifier = Modifier
+                                    .background(
+                                        colors.surface.copy(alpha = 0.88f),
+                                        RoundedCornerShape(50)
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = colors.onBackground
+                    )
+                )
+            },
+            snackbarHost = {
+                if (snackbarHostState != null) {
+                    SnackbarHost(snackbarHostState)
+                }
+            },
+            floatingActionButton = {
+                FloatingActionButton(
+                    modifier = Modifier.semantics {
+                        contentDescription = addHabitContentDescription
+                    },
+                    onClick = onAddClick,
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary
+                ) {
+                    Text("+")
+                }
+            },
+            contentWindowInsets = WindowInsets.systemBars
+        ) { padding ->
+            DashboardBody(
+                uiState = uiState,
+                onCheckClick = onCheckClick,
+                onEditClick = onEditClick,
+                onDeleteHabit = onDeleteHabit,
+                onRetry = onRetry,
+                modifier = Modifier.padding(padding)
+            )
+        }
     }
 }
 

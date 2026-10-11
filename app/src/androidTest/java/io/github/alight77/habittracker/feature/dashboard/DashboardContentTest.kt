@@ -56,7 +56,7 @@ class DashboardContentTest {
             .fetchSemanticsNode().boundsInRoot
         val emptyContent = composeRule.onNodeWithTag("dashboardEmptyContent")
             .fetchSemanticsNode().boundsInRoot
-        val headerText = composeRule.onNodeWithText("今天也从一个小习惯开始")
+        val headerText = composeRule.onNodeWithText("积累微小的坚持，", substring = true)
             .fetchSemanticsNode().boundsInRoot
 
         // 无习惯时提示语随页头与可用高度定位，不能紧贴页头。
@@ -144,16 +144,18 @@ class DashboardContentTest {
             )
         }
 
-        composeRule.onNodeWithText("10月11日 周日").assertIsDisplayed()
-        composeRule.onNodeWithText("今天也从一个小习惯开始").assertIsDisplayed()
+        composeRule.onNodeWithText("10月11日").assertIsDisplayed()
+        composeRule.onNodeWithText("周日 · 农历", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("积累微小的坚持，", substring = true).assertIsDisplayed()
 
         // 模拟既有日期来源更新；页头必须立即跟随 Success.today，而非自行读取系统时钟。
         composeRule.runOnUiThread {
             state.value = DashboardUiState.Success(emptyList(), LocalDate.of(2026, 10, 12))
         }
 
-        composeRule.onNodeWithText("10月12日 周一").assertIsDisplayed()
-        composeRule.onNodeWithText("10月11日 周日").assertDoesNotExist()
+        composeRule.onNodeWithText("10月12日").assertIsDisplayed()
+        composeRule.onNodeWithText("周一 · 农历", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("10月11日").assertDoesNotExist()
     }
 
     @Test
@@ -180,7 +182,7 @@ class DashboardContentTest {
             )
         }
 
-        composeRule.onNodeWithText("10月11日 周日").assertIsDisplayed()
+        composeRule.onNodeWithText("10月11日").assertIsDisplayed()
         composeRule.onNode(hasScrollAction()).performScrollToIndex(12)
         composeRule.onNodeWithText("习惯 12").assertIsDisplayed()
     }

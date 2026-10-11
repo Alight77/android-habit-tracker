@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">习惯打卡</string>
+    <string name="dashboard_title">HabitTracker</string>
     <string name="back">返回</string>
     <string name="add_habit">新增习惯</string>
     <string name="edit_habit">编辑习惯</string>
@@ -17,7 +18,8 @@
     <string name="loading">加载中…</string>
     <string name="start_with_habit">从一个小习惯开始</string>
     <string name="dashboard_empty_guidance">点击右下角按钮，创建第一个习惯</string>
-    <string name="dashboard_encouragement">今天也从一个小习惯开始</string>
+    <string name="dashboard_encouragement">积累微小的坚持，\n就是在创造更好的自己。</string>
+    <string name="dashboard_encouragement_compact">积累微小的坚持，\n就是在创造\n更好的自己。</string>
     <string name="check_in">打卡</string>
     <string name="completed">已完成</string>
     <string name="habit_check_content_description">%1$s：%2$s</string>
