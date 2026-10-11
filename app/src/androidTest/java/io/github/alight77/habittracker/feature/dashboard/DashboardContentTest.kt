@@ -1,7 +1,13 @@
 package io.github.alight77.habittracker.feature.dashboard
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.doubleClick
 import androidx.compose.ui.test.hasScrollAction
@@ -10,9 +16,13 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.alight77.habittracker.ui.theme.HabitTrackerTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -44,14 +54,77 @@ class DashboardContentTest {
 
         val emptyArea = composeRule.onNodeWithTag("dashboardEmptyArea")
             .fetchSemanticsNode().boundsInRoot
-        val message = composeRule.onNodeWithText("从一个小习惯开始")
+        val emptyContent = composeRule.onNodeWithTag("dashboardEmptyContent")
             .fetchSemanticsNode().boundsInRoot
         val headerText = composeRule.onNodeWithText("今天也从一个小习惯开始")
             .fetchSemanticsNode().boundsInRoot
 
         // 无习惯时提示语随页头与可用高度定位，不能紧贴页头。
-        assertTrue(message.top > headerText.bottom)
-        assertTrue(abs(message.center.y - emptyArea.center.y) < 2f)
+        assertTrue(emptyContent.top > headerText.bottom)
+        assertTrue(abs(emptyContent.center.y - emptyArea.center.y) < 2f)
+        composeRule.onNodeWithText("从一个小习惯开始").assertIsDisplayed()
+        composeRule.onNodeWithText("点击右下角按钮，创建第一个习惯").assertIsDisplayed()
+    }
+
+    @Test
+    fun loadingErrorAndEmptyTransitionKeepsFeedbackAndRetry() {
+        val state = mutableStateOf<DashboardUiState>(DashboardUiState.Loading)
+        val retryCount = AtomicInteger(0)
+        composeRule.setContent {
+            HabitTrackerTheme {
+                DashboardContent(
+                    uiState = state.value,
+                    onCheckClick = {},
+                    onAddClick = {},
+                    onStatsClick = {},
+                    onEditClick = {},
+                    onDeleteHabit = {},
+                    onRetry = { retryCount.incrementAndGet() }
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("加载中…").assertIsDisplayed()
+        composeRule.runOnUiThread {
+            state.value = DashboardUiState.Error("加载习惯数据失败，请重试")
+        }
+        composeRule.onNodeWithText("加载中…").assertDoesNotExist()
+        composeRule.onNodeWithText("加载习惯数据失败，请重试").assertIsDisplayed()
+        composeRule.onNodeWithText("重试").performClick()
+        assertEquals(1, retryCount.get())
+
+        composeRule.runOnUiThread {
+            state.value = DashboardUiState.Success(emptyList(), LocalDate.of(2026, 10, 11))
+        }
+        composeRule.onNodeWithText("加载习惯数据失败，请重试").assertDoesNotExist()
+        composeRule.onNodeWithText("点击右下角按钮，创建第一个习惯").assertIsDisplayed()
+    }
+
+    @Test
+    fun errorRetryRemainsReachableOnShortScreenAt2xFontInDarkTheme() {
+        val retryCount = AtomicInteger(0)
+        composeRule.setContent {
+            val deviceDensity = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(deviceDensity.density, 2f)) {
+                HabitTrackerTheme(darkTheme = true) {
+                    Box(modifier = Modifier.width(320.dp).height(240.dp)) {
+                        DashboardContent(
+                            uiState = DashboardUiState.Error("加载习惯数据失败，请重试"),
+                            onCheckClick = {},
+                            onAddClick = {},
+                            onStatsClick = {},
+                            onEditClick = {},
+                            onDeleteHabit = {},
+                            onRetry = { retryCount.incrementAndGet() }
+                        )
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("加载习惯数据失败，请重试").assertExists()
+        composeRule.onNodeWithText("重试").performScrollTo().assertIsDisplayed().performClick()
+        assertEquals(1, retryCount.get())
     }
 
     @Test
