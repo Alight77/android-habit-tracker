@@ -92,7 +92,9 @@ class HabitDatabaseDaoTest {
         val habitId = database.habitDao().getAllHabits().first().single().id
         database.recordDao().setRecordChecked(habitId, epochDay = 20_000L, targetChecked = true)
 
-        database.habitDao().deleteHabitById(habitId)
+        assertEquals(1, database.habitDao().deleteHabitById(habitId))
+        // 重复确认只会命中零行，ViewModel 因此不会再报告一次删除成功。
+        assertEquals(0, database.habitDao().deleteHabitById(habitId))
 
         assertEquals(null, database.habitDao().getHabitById(habitId))
         assertEquals(emptyList<Any>(), database.recordDao().getRecordsForHabitId(habitId).first())

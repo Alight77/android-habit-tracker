@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -222,12 +223,13 @@ private fun DashboardBody(
             text = { Text(stringResource(R.string.delete_habit_confirmation, habit.name)) },
             confirmButton = {
                 TextButton(
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     onClick = {
                         habitPendingDeletion = null
                         onDeleteHabit(habit.id)
                     }
                 ) {
-                    Text(stringResource(R.string.confirm))
+                    Text(stringResource(R.string.confirm_permanent_delete))
                 }
             },
             dismissButton = {

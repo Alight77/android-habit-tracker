@@ -24,8 +24,8 @@
     <string name="edit">编辑</string>
     <string name="delete">删除</string>
     <string name="delete_habit">删除习惯</string>
-    <string name="delete_habit_confirmation">确定删除“%1$s”吗？</string>
-    <string name="confirm">确认</string>
+    <string name="delete_habit_confirmation">永久删除“%1$s”及其全部历史打卡记录？删除后无法恢复。</string>
+    <string name="confirm_permanent_delete">永久删除</string>
     <string name="cancel">取消</string>
     <string name="habit_target_summary">每周目标 %1$d 次</string>
     <string name="habit_streak_summary">连续 %1$d 天</string>

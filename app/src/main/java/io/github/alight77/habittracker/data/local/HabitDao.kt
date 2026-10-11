@@ -23,7 +23,7 @@ interface HabitDao {
     suspend fun updateHabit(habit: HabitEntity)
 
     @Query("DELETE FROM habits WHERE id = :habitId")
-    suspend fun deleteHabitById(habitId: Int)
+    suspend fun deleteHabitById(habitId: Int): Int
 
     @Query("SELECT * FROM habits ORDER BY createdAt DESC")
     fun getAllHabits(): Flow<List<HabitEntity>>

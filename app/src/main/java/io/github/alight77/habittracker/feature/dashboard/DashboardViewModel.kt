@@ -187,9 +187,13 @@ class DashboardViewModel(
     fun deleteHabit(habitId: Int) {
         viewModelScope.launch {
             try {
-                repository.deleteHabitById(habitId)
-                optimisticChecked.update { current ->
-                    current.filterKeys { key -> key.first != habitId }
+                val deletedRows = repository.deleteHabitById(habitId)
+                // 仅在 Room 确认删掉一行后提示成功；重复确认产生的零行删除不算成功。
+                if (deletedRows > 0) {
+                    optimisticChecked.update { current ->
+                        current.filterKeys { key -> key.first != habitId }
+                    }
+                    _events.emit(DashboardUiEvent.ShowMessage("习惯及其历史打卡记录已永久删除"))
                 }
             } catch (error: Exception) {
                 if (error is CancellationException) throw error

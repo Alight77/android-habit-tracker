@@ -28,8 +28,8 @@ class HabitRepository(
         habitDao.deleteHabit(habit)
     }
 
-    suspend fun deleteHabitById(habitId: Int) {
-        habitDao.deleteHabitById(habitId)
+    suspend fun deleteHabitById(habitId: Int): Int {
+        return habitDao.deleteHabitById(habitId)
     }
 
     suspend fun setTodayRecordChecked(habitId: Int, epochDay: Long, targetChecked: Boolean) {

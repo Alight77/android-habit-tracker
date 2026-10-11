@@ -115,7 +115,7 @@ class AddHabitViewModelTest {
 
         override suspend fun updateHabit(habit: HabitEntity) = Unit
 
-        override suspend fun deleteHabitById(habitId: Int) = Unit
+        override suspend fun deleteHabitById(habitId: Int) = 0
 
         override fun getAllHabits(): Flow<List<HabitEntity>> = flowOf(emptyList())
     }
@@ -131,7 +131,7 @@ class AddHabitViewModelTest {
 
         override suspend fun updateHabit(habit: HabitEntity) = Unit
 
-        override suspend fun deleteHabitById(habitId: Int) = Unit
+        override suspend fun deleteHabitById(habitId: Int) = 0
 
         override fun getAllHabits(): Flow<List<HabitEntity>> = flowOf(emptyList())
     }

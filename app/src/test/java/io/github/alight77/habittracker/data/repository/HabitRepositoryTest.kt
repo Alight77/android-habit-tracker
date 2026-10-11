@@ -66,7 +66,7 @@ class HabitRepositoryTest {
         override suspend fun deleteHabit(habit: HabitEntity) = Unit
         override suspend fun getHabitById(habitId: Int): HabitEntity? = null
         override suspend fun updateHabit(habit: HabitEntity) = Unit
-        override suspend fun deleteHabitById(habitId: Int) = Unit
+        override suspend fun deleteHabitById(habitId: Int) = 0
         override fun getAllHabits(): Flow<List<HabitEntity>> = flowOf(emptyList())
     }
 
@@ -83,8 +83,9 @@ class HabitRepositoryTest {
             updatedHabit = habit
         }
 
-        override suspend fun deleteHabitById(habitId: Int) {
+        override suspend fun deleteHabitById(habitId: Int): Int {
             deletedHabitIds += habitId
+            return 1
         }
 
         override fun getAllHabits(): Flow<List<HabitEntity>> = flowOf(emptyList())

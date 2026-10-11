@@ -26,6 +26,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
@@ -286,14 +287,16 @@ class DashboardViewModelTest {
 
     @Test
     fun deleteHabit_whenDaoFails_emitsFailureMessage() = runTest {
-        val habitDao = ThrowingDeleteHabitDao()
-        val recordDao = TestRecordDao(emptyList())
+        val today = LocalDate.of(2026, 9, 19)
+        val storedHabitDao = TestHabitDao(listOf(habit(id = 7, name = "阅读")))
+        val habitDao = ThrowingDeleteHabitDao(storedHabitDao)
+        val recordDao = TestRecordDao(listOf(record(7, today, isDone = true)))
         val viewModel = DashboardViewModel(
             habitDao = habitDao,
             recordDao = recordDao,
             repository = HabitRepository(habitDao, recordDao),
             setTodayHabitChecked = acceptedUseCase(),
-            todaySource = flowOf(LocalDate.of(2026, 9, 19))
+            todaySource = flowOf(today)
         )
         val event = async(start = CoroutineStart.UNDISPATCHED) {
             withTimeout(2_000L) { viewModel.events.take(1).toList().single() }
@@ -304,6 +307,66 @@ class DashboardViewModelTest {
         assertEquals(
             DashboardUiEvent.ShowMessage("删除习惯失败，请稍后重试"),
             event.await()
+        )
+        assertNotNull(storedHabitDao.getHabitById(7))
+        assertNotNull(recordDao.getRecordByDate(7, today.toEpochDay()))
+    }
+
+    @Test
+    fun deleteHabit_whenDaoDeletesHabit_emitsSuccessAndRefreshesDashboard() = runTest {
+        val today = LocalDate.of(2026, 9, 19)
+        val habitDao = TestHabitDao(listOf(habit(id = 7, name = "阅读")))
+        val recordDao = TestRecordDao(emptyList())
+        val viewModel = DashboardViewModel(
+            habitDao = habitDao,
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
+            setTodayHabitChecked = acceptedUseCase(),
+            todaySource = flowOf(today)
+        )
+        viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
+            .first { it.items.singleOrNull()?.id == 7 }
+        val event = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeout(2_000L) { viewModel.events.take(1).toList().single() }
+        }
+
+        viewModel.deleteHabit(7)
+
+        assertEquals(
+            DashboardUiEvent.ShowMessage("习惯及其历史打卡记录已永久删除"),
+            event.await()
+        )
+        assertEquals(
+            emptyList<HabitItemUiState>(),
+            viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
+                .first { it.items.isEmpty() }.items
+        )
+    }
+
+    @Test
+    fun deleteHabit_duplicateRequestReportsSuccessOnlyForDeletedRow() = runTest {
+        val habitDao = TestHabitDao(listOf(habit(id = 7, name = "阅读")))
+        val recordDao = TestRecordDao(emptyList())
+        val viewModel = DashboardViewModel(
+            habitDao = habitDao,
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
+            setTodayHabitChecked = acceptedUseCase(),
+            todaySource = flowOf(LocalDate.of(2026, 9, 19))
+        )
+        val events = mutableListOf<DashboardUiEvent>()
+        backgroundScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            viewModel.events.collect { events += it }
+        }
+
+        viewModel.deleteHabit(7)
+        viewModel.deleteHabit(7)
+        runCurrent()
+
+        assertEquals(null, habitDao.getHabitById(7))
+        assertEquals(
+            listOf(DashboardUiEvent.ShowMessage("习惯及其历史打卡记录已永久删除")),
+            events
         )
     }
 
@@ -367,16 +430,9 @@ class DashboardViewModelTest {
         )
     }
 
-    private class ThrowingDeleteHabitDao : HabitDao {
-        override suspend fun insertHabit(habit: HabitEntity) = Unit
-        override suspend fun deleteHabit(habit: HabitEntity) = Unit
-        override suspend fun getHabitById(habitId: Int): HabitEntity? = null
-        override suspend fun updateHabit(habit: HabitEntity) = Unit
-
-        override suspend fun deleteHabitById(habitId: Int) {
+    private class ThrowingDeleteHabitDao(delegate: HabitDao) : HabitDao by delegate {
+        override suspend fun deleteHabitById(habitId: Int): Int {
             error("database unavailable")
         }
-
-        override fun getAllHabits() = flowOf(emptyList<HabitEntity>())
     }
 }
