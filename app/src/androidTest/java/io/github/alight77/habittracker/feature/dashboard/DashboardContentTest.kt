@@ -1,27 +1,117 @@
 package io.github.alight77.habittracker.feature.dashboard
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.doubleClick
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.alight77.habittracker.domain.usecase.RecentGoalProgress
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.abs
 
 @RunWith(AndroidJUnit4::class)
 class DashboardContentTest {
 
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun emptyMessageStaysCenteredInRemainingSpace() {
+        composeRule.setContent {
+            DashboardContent(
+                uiState = DashboardUiState.Success(emptyList(), LocalDate.of(2026, 10, 11)),
+                onCheckClick = {},
+                onAddClick = {},
+                onStatsClick = {},
+                onEditClick = {},
+                onDeleteHabit = {},
+                onRetry = {}
+            )
+        }
+
+        val emptyArea = composeRule.onNodeWithTag("dashboardEmptyArea")
+            .fetchSemanticsNode().boundsInRoot
+        val message = composeRule.onNodeWithText("从一个小习惯开始")
+            .fetchSemanticsNode().boundsInRoot
+        val headerText = composeRule.onNodeWithText("今天也从一个小习惯开始")
+            .fetchSemanticsNode().boundsInRoot
+
+        // 无习惯时提示语随页头与可用高度定位，不能紧贴页头。
+        assertTrue(message.top > headerText.bottom)
+        assertTrue(abs(message.center.y - emptyArea.center.y) < 2f)
+    }
+
+    @Test
+    fun dateHeaderFollowsSuccessTodayForEmptyDashboard() {
+        val state = mutableStateOf<DashboardUiState>(
+            DashboardUiState.Success(emptyList(), LocalDate.of(2026, 10, 11))
+        )
+        composeRule.setContent {
+            DashboardContent(
+                uiState = state.value,
+                onCheckClick = {},
+                onAddClick = {},
+                onStatsClick = {},
+                onEditClick = {},
+                onDeleteHabit = {},
+                onRetry = {}
+            )
+        }
+
+        composeRule.onNodeWithText("10月11日 周日").assertIsDisplayed()
+        composeRule.onNodeWithText("今天也从一个小习惯开始").assertIsDisplayed()
+
+        // 模拟既有日期来源更新；页头必须立即跟随 Success.today，而非自行读取系统时钟。
+        composeRule.runOnUiThread {
+            state.value = DashboardUiState.Success(emptyList(), LocalDate.of(2026, 10, 12))
+        }
+
+        composeRule.onNodeWithText("10月12日 周一").assertIsDisplayed()
+        composeRule.onNodeWithText("10月11日 周日").assertDoesNotExist()
+    }
+
+    @Test
+    fun dateHeaderAndCardsShareScrollableSuccessContent() {
+        val items = (1..12).map { index ->
+            HabitItemUiState(
+                id = index,
+                name = "习惯 $index",
+                targetPerWeek = 3,
+                isDoneToday = false,
+                streak = 0,
+                goalProgress = RecentGoalProgress(0, 3)
+            )
+        }
+        composeRule.setContent {
+            DashboardContent(
+                uiState = DashboardUiState.Success(items, LocalDate.of(2026, 10, 11)),
+                onCheckClick = {},
+                onAddClick = {},
+                onStatsClick = {},
+                onEditClick = {},
+                onDeleteHabit = {},
+                onRetry = {}
+            )
+        }
+
+        composeRule.onNodeWithText("10月11日 周日").assertIsDisplayed()
+        composeRule.onNode(hasScrollAction()).performScrollToIndex(12)
+        composeRule.onNodeWithText("习惯 12").assertIsDisplayed()
+    }
 
     @Test
     fun moreMenu_navigatesToEditAndConfirmsDeletion() {

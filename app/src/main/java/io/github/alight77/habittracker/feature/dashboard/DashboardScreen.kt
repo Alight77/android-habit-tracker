@@ -1,9 +1,13 @@
 package io.github.alight77.habittracker.feature.dashboard
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,14 +27,18 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -197,21 +205,45 @@ private fun DashboardBody(
         }
 
         is DashboardUiState.Success -> {
-            if (uiState.items.isEmpty()) {
-                EmptyDashboard(modifier = modifier)
-            } else {
-                LazyColumn(modifier = modifier) {
-                    items(
-                        items = uiState.items,
-                        key = { it.id }
-                    ) { item ->
-                        HabitCard(
-                            habit = item,
-                            // 卡片只上报点击；目标由 ViewModel 根据最新意图同步计算。
-                            onCheckClick = { onCheckClick(item.id) },
-                            onEditClick = { onEditClick(item.id) },
-                            onDeleteClick = { habitPendingDeletion = item }
-                        )
+            BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+                var headerHeightPx by remember { mutableIntStateOf(0) }
+                val density = LocalDensity.current
+                // 空状态在页头与底部操作区之间居中；测量实际页头高度以适应字号和窄屏。
+                val emptyMinHeight = (
+                    maxHeight - with(density) { headerHeightPx.toDp() } - 88.dp
+                ).coerceAtLeast(0.dp)
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 88.dp)
+                ) {
+                    item(key = "today_header") {
+                        Box(modifier = Modifier.onSizeChanged { headerHeightPx = it.height }) {
+                            // 页头直接使用与卡片同一份 Success 状态中的日期，避免出现旧日标题。
+                            TodayJournalHeader(today = uiState.today)
+                        }
+                    }
+                    if (uiState.items.isEmpty()) {
+                        item(key = "empty") {
+                            EmptyDashboard(
+                                modifier = Modifier
+                                    .heightIn(min = emptyMinHeight)
+                                    .testTag("dashboardEmptyArea")
+                            )
+                        }
+                    } else {
+                        items(
+                            items = uiState.items,
+                            key = { it.id }
+                        ) { item ->
+                            HabitCard(
+                                habit = item,
+                                // 卡片只上报点击；目标由 ViewModel 根据最新意图同步计算。
+                                onCheckClick = { onCheckClick(item.id) },
+                                onEditClick = { onEditClick(item.id) },
+                                onDeleteClick = { habitPendingDeletion = item }
+                            )
+                        }
                     }
                 }
             }
@@ -247,18 +279,15 @@ private fun DashboardBody(
 private fun EmptyDashboard(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = stringResource(R.string.start_with_habit),
-                modifier = Modifier.padding(top = 6.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.outline
-            )
-        }
+        Text(
+            text = stringResource(R.string.start_with_habit),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.outline
+        )
     }
 }
 
@@ -284,7 +313,7 @@ fun DashboardContentSuccessPreview() {
                 goalProgress = RecentGoalProgress(2, 7)
             )
         ),
-        today = LocalDate.now()
+        today = LocalDate.of(2026, 10, 11)
     )
 
     DashboardContent(
@@ -302,7 +331,7 @@ fun DashboardContentSuccessPreview() {
 @Composable
 fun DashboardContentEmptyPreview() {
     DashboardContent(
-        uiState = DashboardUiState.Success(emptyList(), LocalDate.now()),
+        uiState = DashboardUiState.Success(emptyList(), LocalDate.of(2026, 10, 11)),
         onCheckClick = { _ -> },
         onAddClick = {},
         onStatsClick = {},
