@@ -24,6 +24,36 @@ class StatsViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
+    fun uiState_movesSevenDayWindowWhenDateChanges() = runTest {
+        val previousDate = LocalDate.of(2026, 9, 19)
+        val currentDate = previousDate.plusDays(1)
+        val todaySource = MutableStateFlow(previousDate)
+        val viewModel = StatsViewModel(
+            habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读"))),
+            recordDao = TestRecordDao(
+                listOf(
+                    record(1, previousDate.minusDays(6), isDone = true),
+                    record(1, previousDate, isDone = true),
+                    record(1, currentDate, isDone = true)
+                )
+            ),
+            todaySource = todaySource
+        )
+
+        val previous = viewModel.uiState.filterIsInstance<StatsUiState.Success>()
+            .first { it.summary.recentSevenDayCounts.last().date == previousDate }
+        assertEquals(1, previous.summary.recentSevenDayCounts.first().completedHabits)
+        assertEquals(1, previous.summary.recentSevenDayCounts.last().completedHabits)
+
+        todaySource.value = currentDate
+        val current = viewModel.uiState.filterIsInstance<StatsUiState.Success>()
+            .first { it.summary.recentSevenDayCounts.last().date == currentDate }
+        assertEquals(0, current.summary.recentSevenDayCounts.first().completedHabits)
+        assertEquals(1, current.summary.recentSevenDayCounts[5].completedHabits)
+        assertEquals(1, current.summary.recentSevenDayCounts.last().completedHabits)
+    }
+
+    @Test
     fun uiState_updatesTodayCountWhenDateChanges() = runTest {
         val previousDate = LocalDate.of(2026, 9, 19)
         val currentDate = previousDate.plusDays(1)
@@ -74,7 +104,11 @@ class StatsViewModelTest {
                 todayDoneCount = 1,
                 totalDoneCount = 3,
                 recentSevenDayGoalPercent = 14,
-                longestStreak = 1
+                longestStreak = 1,
+                recentSevenDayCounts = (6L downTo 0L).map { daysAgo ->
+                    val date = today.minusDays(daysAgo)
+                    DailyCheckInCount(date, if (daysAgo <= 1L) 1 else 0)
+                }
             ),
             state.summary
         )

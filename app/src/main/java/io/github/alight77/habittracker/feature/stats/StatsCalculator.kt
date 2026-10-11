@@ -10,12 +10,18 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.roundToInt
 
+data class DailyCheckInCount(
+    val date: LocalDate,
+    val completedHabits: Int
+)
+
 data class StatsSummary(
     val totalHabits: Int,
     val todayDoneCount: Int,
     val totalDoneCount: Int,
     val recentSevenDayGoalPercent: Int,
-    val longestStreak: Int
+    val longestStreak: Int,
+    val recentSevenDayCounts: List<DailyCheckInCount>
 )
 
 fun calculateStats(
@@ -31,11 +37,23 @@ fun calculateStats(
         record to epochDayToLocalDate(record.date)
     }
 
-    val todayDoneCount = doneRecordsWithDates
-        .filter { (_, date) -> date == today }
-        .map { (record, _) -> record.habitId }
+    val startEpochDay = today.minusDays(6).toEpochDay()
+    val todayEpochDay = today.toEpochDay()
+    // 每格是一个自然日内已完成的不同习惯数；保留零值，且不让重复记录放大柱形。
+    val countsByEpochDay = doneRecords.asSequence()
+        .filter { record -> record.date in startEpochDay..todayEpochDay }
+        .map { record -> record.date to record.habitId }
         .distinct()
-        .count()
+        .groupingBy { (epochDay, _) -> epochDay }
+        .eachCount()
+    val recentSevenDayCounts = (6L downTo 0L).map { daysAgo ->
+        val date = today.minusDays(daysAgo)
+        DailyCheckInCount(
+            date = date,
+            completedHabits = countsByEpochDay[date.toEpochDay()] ?: 0
+        )
+    }
+    val todayDoneCount = recentSevenDayCounts.last().completedHabits
 
     val recordsByHabit = doneRecordsWithDates.groupBy(
         keySelector = { (record, _) -> record.habitId },
@@ -67,6 +85,7 @@ fun calculateStats(
         todayDoneCount = todayDoneCount,
         totalDoneCount = doneRecords.size,
         recentSevenDayGoalPercent = recentSevenDayGoalPercent,
-        longestStreak = longestStreak
+        longestStreak = longestStreak,
+        recentSevenDayCounts = recentSevenDayCounts
     )
 }

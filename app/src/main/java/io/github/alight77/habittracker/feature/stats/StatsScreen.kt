@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.Lifecycle
 import io.github.alight77.habittracker.R
+import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -183,7 +184,10 @@ fun StatsContentPreview() {
                 todayDoneCount = 2,
                 totalDoneCount = 18,
                 recentSevenDayGoalPercent = 71,
-                longestStreak = 5
+                longestStreak = 5,
+                recentSevenDayCounts = listOf(1, 3, 2, 0, 2, 3, 2).mapIndexed { index, count ->
+                    DailyCheckInCount(LocalDate.of(2026, 10, 5).plusDays(index.toLong()), count)
+                }
             )
         ),
         onBackClick = {},

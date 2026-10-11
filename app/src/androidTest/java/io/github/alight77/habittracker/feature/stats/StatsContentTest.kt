@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.LocalDate
 
 @RunWith(AndroidJUnit4::class)
 class StatsContentTest {
@@ -26,7 +27,13 @@ class StatsContentTest {
                         todayDoneCount = 1,
                         totalDoneCount = 1,
                         recentSevenDayGoalPercent = 100,
-                        longestStreak = 1
+                        longestStreak = 1,
+                        recentSevenDayCounts = (6L downTo 0L).map { daysAgo ->
+                            DailyCheckInCount(
+                                LocalDate.of(2026, 10, 11).minusDays(daysAgo),
+                                if (daysAgo == 0L) 1 else 0
+                            )
+                        }
                     )
                 ),
                 onBackClick = {},

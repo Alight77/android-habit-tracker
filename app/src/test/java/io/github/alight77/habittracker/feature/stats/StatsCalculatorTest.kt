@@ -10,6 +10,78 @@ import java.time.ZoneId
 class StatsCalculatorTest {
 
     @Test
+    fun calculateStats_reportsSevenNaturalDayCountsIncludingZero() {
+        val today = LocalDate.of(2026, 10, 11)
+        val summary = calculateStats(
+            habits = (1..3).map(::habit),
+            records = listOf(
+                doneRecord(1, today.minusDays(6)),
+                doneRecord(1, today.minusDays(5)),
+                doneRecord(2, today.minusDays(5)),
+                doneRecord(3, today.minusDays(5)),
+                doneRecord(1, today.minusDays(4)),
+                doneRecord(2, today.minusDays(4)),
+                doneRecord(2, today.minusDays(2)),
+                doneRecord(3, today.minusDays(2)),
+                doneRecord(1, today.minusDays(1)),
+                doneRecord(2, today.minusDays(1)),
+                doneRecord(3, today.minusDays(1)),
+                doneRecord(1, today),
+                doneRecord(3, today)
+            ),
+            today = today
+        )
+
+        assertEquals(
+            sevenDayCounts(today, listOf(1, 3, 2, 0, 2, 3, 2)),
+            summary.recentSevenDayCounts
+        )
+        assertEquals(summary.todayDoneCount, summary.recentSevenDayCounts.last().completedHabits)
+    }
+
+    @Test
+    fun calculateStats_countsEachExistingCompletedHabitOnceWithinWindow() {
+        val today = LocalDate.of(2026, 10, 11)
+        val summary = calculateStats(
+            habits = listOf(habit(id = 1), habit(id = 2)),
+            records = listOf(
+                doneRecord(1, today.minusDays(6)),
+                doneRecord(1, today.minusDays(6)),
+                skippedRecord(2, today.minusDays(6)),
+                doneRecord(99, today.minusDays(5)),
+                doneRecord(1, today.minusDays(7)),
+                doneRecord(1, today.plusDays(1)),
+                doneRecord(2, today)
+            ),
+            today = today
+        )
+
+        assertEquals(
+            sevenDayCounts(today, listOf(1, 0, 0, 0, 0, 0, 1)),
+            summary.recentSevenDayCounts
+        )
+    }
+
+    @Test
+    fun calculateStats_keepsSevenNaturalDatesAcrossLeapDay() {
+        val today = LocalDate.of(2024, 3, 1)
+        val summary = calculateStats(
+            habits = listOf(habit(id = 1)),
+            records = listOf(
+                doneRecord(1, LocalDate.of(2024, 2, 24)),
+                doneRecord(1, LocalDate.of(2024, 2, 29)),
+                doneRecord(1, today)
+            ),
+            today = today
+        )
+
+        assertEquals(
+            sevenDayCounts(today, listOf(1, 0, 0, 0, 0, 1, 1)),
+            summary.recentSevenDayCounts
+        )
+    }
+
+    @Test
     fun calculateStats_returnsZeroSummaryForEmptyData() {
         val today = LocalDate.of(2026, 7, 7)
 
@@ -25,7 +97,8 @@ class StatsCalculatorTest {
                 todayDoneCount = 0,
                 totalDoneCount = 0,
                 recentSevenDayGoalPercent = 0,
-                longestStreak = 0
+                longestStreak = 0,
+                recentSevenDayCounts = sevenDayCounts(today, List(7) { 0 })
             ),
             summary
         )
@@ -49,7 +122,8 @@ class StatsCalculatorTest {
                 todayDoneCount = 1,
                 totalDoneCount = 3,
                 recentSevenDayGoalPercent = 29,
-                longestStreak = 2
+                longestStreak = 2,
+                recentSevenDayCounts = sevenDayCounts(today, listOf(0, 0, 0, 0, 0, 1, 1))
             ),
             summary
         )
@@ -77,7 +151,8 @@ class StatsCalculatorTest {
                 todayDoneCount = 2,
                 totalDoneCount = 3,
                 recentSevenDayGoalPercent = 21,
-                longestStreak = 2
+                longestStreak = 2,
+                recentSevenDayCounts = sevenDayCounts(today, listOf(0, 0, 0, 0, 0, 1, 2))
             ),
             summary
         )
@@ -165,5 +240,12 @@ class StatsCalculatorTest {
             date = date.toEpochDay(),
             isDone = false
         )
+    }
+
+    private fun sevenDayCounts(today: LocalDate, counts: List<Int>): List<DailyCheckInCount> {
+        require(counts.size == 7)
+        return counts.mapIndexed { index, count ->
+            DailyCheckInCount(today.minusDays((6 - index).toLong()), count)
+        }
     }
 }
