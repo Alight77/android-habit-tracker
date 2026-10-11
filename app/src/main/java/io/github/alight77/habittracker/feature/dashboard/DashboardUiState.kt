@@ -1,7 +1,6 @@
 package io.github.alight77.habittracker.feature.dashboard
 
 import androidx.compose.runtime.Immutable
-import io.github.alight77.habittracker.domain.usecase.RecentGoalProgress
 import java.time.LocalDate
 
 sealed interface  DashboardUiState {
@@ -26,5 +25,5 @@ data class HabitItemUiState(
     val targetPerWeek: Int,
     val isDoneToday: Boolean,
     val streak: Int,
-    val goalProgress: RecentGoalProgress
+    val recentDays: List<RecentCheckInDay>
 )

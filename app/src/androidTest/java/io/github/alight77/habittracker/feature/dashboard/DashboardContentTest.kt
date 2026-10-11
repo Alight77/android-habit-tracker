@@ -13,7 +13,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import io.github.alight77.habittracker.domain.usecase.RecentGoalProgress
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -93,7 +92,7 @@ class DashboardContentTest {
                 targetPerWeek = 3,
                 isDoneToday = false,
                 streak = 0,
-                goalProgress = RecentGoalProgress(0, 3)
+                recentDays = emptyList()
             )
         }
         composeRule.setContent {
@@ -127,7 +126,7 @@ class DashboardContentTest {
                             targetPerWeek = 3,
                             isDoneToday = false,
                             streak = 0,
-                            goalProgress = RecentGoalProgress(1, 3)
+                            recentDays = emptyList()
                         )
                     ),
                     today = LocalDate.of(2026, 9, 19)
@@ -232,7 +231,7 @@ class DashboardContentTest {
                 targetPerWeek = 3,
                 isDoneToday = true,
                 streak = 1,
-                goalProgress = RecentGoalProgress(1, 3)
+                recentDays = emptyList()
             )
         ),
         today = LocalDate.of(2026, 9, 19)

@@ -7,7 +7,6 @@ import io.github.alight77.habittracker.data.local.HabitDao
 import io.github.alight77.habittracker.data.local.RecordDao
 import io.github.alight77.habittracker.data.repository.HabitRepository
 import io.github.alight77.habittracker.domain.usecase.calculateStreak
-import io.github.alight77.habittracker.domain.usecase.calculateRecentGoalProgress
 import io.github.alight77.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 import io.github.alight77.habittracker.domain.usecase.epochDayToLocalDate
 import kotlinx.coroutines.CancellationException
@@ -230,8 +229,7 @@ class DashboardViewModel(
                         val effectiveDoneDates = persistedDoneDates.filterNot { date -> date == today } +
                             if (mergedDoneToday) listOf(today) else emptyList()
                         val streak = calculateStreak(effectiveDoneDates, today)
-                        val goalProgress = calculateRecentGoalProgress(
-                            targetPerWeek = habit.targetPerWeek,
+                        val recentDays = recentCheckInDays(
                             createdDate = Instant.ofEpochMilli(habit.createdAt)
                                 .atZone(zoneId)
                                 .toLocalDate(),
@@ -245,7 +243,7 @@ class DashboardViewModel(
                             habit.targetPerWeek,
                             mergedDoneToday,
                             streak,
-                            goalProgress
+                            recentDays
                         )
                     }
 

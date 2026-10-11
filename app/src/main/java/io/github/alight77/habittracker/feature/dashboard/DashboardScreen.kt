@@ -49,7 +49,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import java.time.LocalDate
 import io.github.alight77.habittracker.R
-import io.github.alight77.habittracker.domain.usecase.RecentGoalProgress
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -302,7 +301,11 @@ fun DashboardContentSuccessPreview() {
                 targetPerWeek = 5,
                 isDoneToday = true,
                 streak = 4,
-                goalProgress = RecentGoalProgress(4, 5)
+                recentDays = recentCheckInDays(
+                    LocalDate.of(2026, 10, 5),
+                    (0L..3L).map(LocalDate.of(2026, 10, 11)::minusDays),
+                    LocalDate.of(2026, 10, 11)
+                )
             ),
             HabitItemUiState(
                 id = 2,
@@ -310,7 +313,11 @@ fun DashboardContentSuccessPreview() {
                 targetPerWeek = 7,
                 isDoneToday = false,
                 streak = 0,
-                goalProgress = RecentGoalProgress(2, 7)
+                recentDays = recentCheckInDays(
+                    LocalDate.of(2026, 10, 5),
+                    listOf(LocalDate.of(2026, 10, 9), LocalDate.of(2026, 10, 7)),
+                    LocalDate.of(2026, 10, 11)
+                )
             )
         ),
         today = LocalDate.of(2026, 10, 11)

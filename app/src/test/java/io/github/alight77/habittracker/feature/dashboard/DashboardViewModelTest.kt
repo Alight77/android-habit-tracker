@@ -4,7 +4,6 @@ import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.local.HabitDao
 import io.github.alight77.habittracker.data.local.RecordEntity
 import io.github.alight77.habittracker.data.repository.HabitRepository
-import io.github.alight77.habittracker.domain.usecase.RecentGoalProgress
 import io.github.alight77.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 import io.github.alight77.habittracker.testutil.MainDispatcherRule
 import io.github.alight77.habittracker.testutil.TestHabitDao
@@ -67,14 +66,18 @@ class DashboardViewModelTest {
                 targetPerWeek = 7,
                 isDoneToday = true,
                 streak = 2,
-                goalProgress = RecentGoalProgress(2, 7)
+                recentDays = recentCheckInDays(
+                    today.minusDays(6),
+                    listOf(today, today.minusDays(1)),
+                    today
+                )
             ),
             state.items.single()
         )
     }
 
     @Test
-    fun uiState_proratesNewHabitGoalFromCreationDay() = runTest {
+    fun uiState_keepsFullTargetAndMarksDaysBeforeCreation() = runTest {
         val today = LocalDate.of(2026, 9, 19)
         val createdAt = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读", targetPerWeek = 3, createdAt = createdAt)))
@@ -89,11 +92,15 @@ class DashboardViewModelTest {
 
         val state = viewModel.uiState.filterIsInstance<DashboardUiState.Success>().first()
 
-        assertEquals(RecentGoalProgress(1, 1), state.items.single().goalProgress)
+        val item = state.items.single()
+        assertEquals(3, item.targetPerWeek)
+        assertEquals(1, item.streak)
+        assertEquals(List(6) { RecentDayStatus.BEFORE_CREATION } + RecentDayStatus.CHECKED,
+            item.recentDays.map { it.status })
     }
 
     @Test
-    fun onHabitChecked_updatesGoalProgressAndStreakOptimistically() = runTest {
+    fun onHabitChecked_updatesRecentDayAndStreakOptimistically() = runTest {
         val today = LocalDate.of(2026, 9, 19)
         val habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读", targetPerWeek = 3)))
         val recordDao = TestRecordDao(listOf(record(1, today.minusDays(1), isDone = true)))
@@ -120,13 +127,13 @@ class DashboardViewModelTest {
 
         val state = viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
             .first { it.items.single().isDoneToday }
-        assertEquals(RecentGoalProgress(2, 3), state.items.single().goalProgress)
+        assertEquals(RecentDayStatus.CHECKED, state.items.single().recentDays.last().status)
         assertEquals(2, state.items.single().streak)
         persistGate.complete(Unit)
     }
 
     @Test
-    fun onHabitUnchecked_updatesGoalProgressAndStreakOptimistically() = runTest {
+    fun onHabitUnchecked_keepsYesterdayInRecentDaysWhileStreakResets() = runTest {
         val today = LocalDate.of(2026, 9, 19)
         val habitDao = TestHabitDao(listOf(habit(id = 1, name = "阅读", targetPerWeek = 3)))
         val recordDao = TestRecordDao(
@@ -159,7 +166,8 @@ class DashboardViewModelTest {
 
         val state = viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
             .first { !it.items.single().isDoneToday }
-        assertEquals(RecentGoalProgress(1, 3), state.items.single().goalProgress)
+        assertEquals(RecentDayStatus.CHECKED, state.items.single().recentDays[5].status)
+        assertEquals(RecentDayStatus.NOT_CHECKED, state.items.single().recentDays[6].status)
         assertEquals(0, state.items.single().streak)
         persistGate.complete(Unit)
     }
