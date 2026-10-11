@@ -1,14 +1,29 @@
 package io.github.alight77.habittracker.feature.addhabit
 
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.SoftwareKeyboardController
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.unit.dp
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -18,11 +33,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(AndroidJUnit4::class)
 class AddHabitScreenTest {
@@ -64,15 +81,16 @@ class AddHabitScreenTest {
     @Test
     fun saveHabit_withValidName_persistsHabitAndNavigatesBack() {
         val backClickCount = AtomicInteger(0)
+        val stableViewModel = viewModel()
         composeRule.setContent {
             AddHabitScreen(
-                viewModel = viewModel(),
+                viewModel = stableViewModel,
                 onBackClick = { backClickCount.incrementAndGet() }
             )
         }
 
         composeRule.onNode(hasSetTextAction()).performTextInput("阅读")
-        composeRule.onNodeWithText("保存").performClick()
+        composeRule.onNodeWithText("保存").performScrollTo().performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
 
         assertEquals(1, backClickCount.get())
@@ -85,9 +103,11 @@ class AddHabitScreenTest {
     @Test
     fun saveHabit_withSelectedTarget_persistsTargetAndDisablesUpperBound() {
         val backClickCount = AtomicInteger(0)
+        // IME Insets 变化会触发重组；测试与实际 Activity 一样持有同一个 ViewModel。
+        val stableViewModel = viewModel()
         composeRule.setContent {
             AddHabitScreen(
-                viewModel = viewModel(),
+                viewModel = stableViewModel,
                 onBackClick = { backClickCount.incrementAndGet() }
             )
         }
@@ -97,7 +117,7 @@ class AddHabitScreenTest {
         composeRule.onNodeWithText("5 次 / 周").assertIsDisplayed()
 
         composeRule.onNode(hasSetTextAction()).performTextInput("阅读")
-        composeRule.onNodeWithText("保存").performClick()
+        composeRule.onNodeWithText("保存").performScrollTo().performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
 
         assertEquals(
@@ -119,6 +139,80 @@ class AddHabitScreenTest {
         composeRule.onNodeWithContentDescription("返回").performClick()
 
         assertEquals(1, backClickCount.get())
+    }
+
+    @Test
+    fun compactViewport_longNameAndSaveRemainReachable() {
+        val longName = "每天阅读三十分钟并记录心得和复盘计划"
+        val backClickCount = AtomicInteger(0)
+        val stableViewModel = viewModel()
+        stableViewModel.onNameChanged(longName)
+        composeRule.setContent {
+            Box(Modifier.fillMaxWidth().height(280.dp)) {
+                AddHabitScreen(
+                    viewModel = stableViewModel,
+                    onBackClick = { backClickCount.incrementAndGet() }
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("保存").assertIsNotDisplayed()
+        // 短视口与键盘遮挡分别验证，避免让人工容器承受大于自身高度的系统 IME Insets。
+        composeRule.onNodeWithText("保存").performScrollTo()
+        composeRule.onNodeWithText("保存").assertIsDisplayed().performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
+
+        assertEquals(longName, runBlocking { database.habitDao().getAllHabits().first().single().name })
+    }
+
+    @Test
+    fun edgeToEdgeScreen_withIme_keepsSaveReachable() {
+        val longName = "每天阅读三十分钟并记录心得和复盘计划"
+        val imeBottomPx = AtomicInteger(0)
+        val backClickCount = AtomicInteger(0)
+        val keyboardController = AtomicReference<SoftwareKeyboardController>()
+        val stableViewModel = viewModel()
+        composeRule.runOnUiThread { composeRule.activity.enableEdgeToEdge() }
+        composeRule.setContent {
+            val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+            val controller = LocalSoftwareKeyboardController.current
+            SideEffect {
+                imeBottomPx.set(imeBottom)
+                keyboardController.set(controller)
+            }
+            AddHabitScreen(
+                viewModel = stableViewModel,
+                onBackClick = { backClickCount.incrementAndGet() }
+            )
+        }
+
+        composeRule.onNode(hasSetTextAction()).performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) { imeBottomPx.get() > 0 }
+        composeRule.onNode(hasSetTextAction()).performTextInput(longName)
+        composeRule.onNodeWithText("保存").performScrollTo()
+
+        val saveBounds = composeRule.onNodeWithText("保存").getUnclippedBoundsInRoot()
+        val density = composeRule.density.density
+        val saveBottomPx = saveBounds.bottom.value * density
+        val keyboardTopPx = composeRule.activity.window.decorView.height - imeBottomPx.get()
+        val titleBottomDp = composeRule.onNodeWithText("新增习惯")
+            .getUnclippedBoundsInRoot().bottom.value
+        val minimumKeyboardTopPx =
+            (titleBottomDp + (saveBounds.bottom - saveBounds.top).value + 16f) * density
+        if (keyboardTopPx >= minimumKeyboardTopPx) {
+            assertTrue(
+                "保存按钮必须位于键盘上方：buttonBottom=$saveBottomPx, keyboardTop=$keyboardTopPx",
+                saveBottomPx <= keyboardTopPx + 1f
+            )
+        } else {
+            // 极短横屏无法同时容纳顶部栏和按钮；收起键盘后仍须能滚动并完成保存。
+            composeRule.runOnUiThread { keyboardController.get().hide() }
+            composeRule.waitUntil(timeoutMillis = 5_000L) { imeBottomPx.get() == 0 }
+            composeRule.onNodeWithText("保存").performScrollTo().assertIsDisplayed()
+        }
+        composeRule.onNodeWithText("保存").performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
+        assertEquals(longName, runBlocking { database.habitDao().getAllHabits().first().single().name })
     }
 
     private fun viewModel(): AddHabitViewModel {

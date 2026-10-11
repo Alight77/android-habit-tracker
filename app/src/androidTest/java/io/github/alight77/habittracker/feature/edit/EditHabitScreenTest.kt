@@ -1,7 +1,14 @@
 package io.github.alight77.habittracker.feature.edit
 
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -9,6 +16,14 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.SoftwareKeyboardController
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.unit.dp
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -19,11 +34,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(AndroidJUnit4::class)
 class EditHabitScreenTest {
@@ -82,7 +99,7 @@ class EditHabitScreenTest {
         composeRule.onNode(hasSetTextAction()).performTextInput("晨读")
         repeat(2) { composeRule.onNodeWithText("＋").performClick() }
         composeRule.onNodeWithText("5 次 / 周").assertIsDisplayed()
-        composeRule.onNodeWithText("保存修改").performClick()
+        composeRule.onNodeWithText("保存修改").performScrollTo().performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
 
         assertEquals(
@@ -95,5 +112,99 @@ class EditHabitScreenTest {
             ),
             runBlocking { database.habitDao().getHabitById(habitId) }
         )
+    }
+
+    @Test
+    fun compactViewport_editedNameAndSaveRemainReachable() {
+        val longName = "每天晨读并记录书摘和复盘计划"
+        runBlocking {
+            database.habitDao().insertHabit(
+                HabitEntity(name = "阅读", description = "", targetPerWeek = 3, createdAt = 100L)
+            )
+        }
+        val habitId = runBlocking { database.habitDao().getAllHabits().first().single().id }
+        val backClickCount = AtomicInteger(0)
+        val viewModel = EditHabitViewModel(
+            repository = HabitRepository(database.habitDao(), database.recordDao()),
+            habitId = habitId
+        )
+        composeRule.setContent {
+            Box(Modifier.fillMaxWidth().height(280.dp)) {
+                EditHabitScreen(
+                    viewModel = viewModel,
+                    onBackClick = { backClickCount.incrementAndGet() }
+                )
+            }
+        }
+
+        composeRule.onNode(hasSetTextAction()).assertExists()
+        viewModel.onNameChanged(longName)
+        composeRule.onNodeWithText("保存修改").assertIsNotDisplayed()
+        // 编辑页与新增页一致，短视口的保存入口必须能通过滚动触达。
+        composeRule.onNodeWithText("保存修改").performScrollTo()
+        composeRule.onNodeWithText("保存修改").assertIsDisplayed().performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
+
+        assertEquals(longName, runBlocking { database.habitDao().getHabitById(habitId)?.name })
+    }
+
+    @Test
+    fun edgeToEdgeScreen_withIme_keepsSaveReachable() {
+        val longName = "每天晨读并记录书摘和复盘计划"
+        runBlocking {
+            database.habitDao().insertHabit(
+                HabitEntity(name = "阅读", description = "", targetPerWeek = 3, createdAt = 100L)
+            )
+        }
+        val habitId = runBlocking { database.habitDao().getAllHabits().first().single().id }
+        val stableViewModel = EditHabitViewModel(
+            repository = HabitRepository(database.habitDao(), database.recordDao()),
+            habitId = habitId
+        )
+        val imeBottomPx = AtomicInteger(0)
+        val backClickCount = AtomicInteger(0)
+        val keyboardController = AtomicReference<SoftwareKeyboardController>()
+        composeRule.runOnUiThread { composeRule.activity.enableEdgeToEdge() }
+        composeRule.setContent {
+            val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+            val controller = LocalSoftwareKeyboardController.current
+            SideEffect {
+                imeBottomPx.set(imeBottom)
+                keyboardController.set(controller)
+            }
+            EditHabitScreen(
+                viewModel = stableViewModel,
+                onBackClick = { backClickCount.incrementAndGet() }
+            )
+        }
+
+        composeRule.onNode(hasSetTextAction()).performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) { imeBottomPx.get() > 0 }
+        composeRule.onNode(hasSetTextAction()).performTextClearance()
+        composeRule.onNode(hasSetTextAction()).performTextInput(longName)
+        composeRule.onNodeWithText("保存修改").performScrollTo()
+
+        val saveBounds = composeRule.onNodeWithText("保存修改").getUnclippedBoundsInRoot()
+        val density = composeRule.density.density
+        val saveBottomPx = saveBounds.bottom.value * density
+        val keyboardTopPx = composeRule.activity.window.decorView.height - imeBottomPx.get()
+        val titleBottomDp = composeRule.onNodeWithText("编辑习惯")
+            .getUnclippedBoundsInRoot().bottom.value
+        val minimumKeyboardTopPx =
+            (titleBottomDp + (saveBounds.bottom - saveBounds.top).value + 16f) * density
+        if (keyboardTopPx >= minimumKeyboardTopPx) {
+            assertTrue(
+                "保存修改按钮必须位于键盘上方：buttonBottom=$saveBottomPx, keyboardTop=$keyboardTopPx",
+                saveBottomPx <= keyboardTopPx + 1f
+            )
+        } else {
+            // 极短横屏无法同时容纳顶部栏和按钮；收起键盘后仍须能滚动并完成编辑。
+            composeRule.runOnUiThread { keyboardController.get().hide() }
+            composeRule.waitUntil(timeoutMillis = 5_000L) { imeBottomPx.get() == 0 }
+            composeRule.onNodeWithText("保存修改").performScrollTo().assertIsDisplayed()
+        }
+        composeRule.onNodeWithText("保存修改").performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
+        assertEquals(longName, runBlocking { database.habitDao().getHabitById(habitId)?.name })
     }
 }
