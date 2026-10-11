@@ -13,6 +13,7 @@
     <string name="saving">保存中…</string>
     <string name="retry">重试</string>
     <string name="statistics">统计</string>
+    <string name="stats_page_title">成长记录</string>
     <string name="loading">加载中…</string>
     <string name="start_with_habit">从一个小习惯开始</string>
     <string name="dashboard_empty_guidance">点击右下角按钮，创建第一个习惯</string>
@@ -37,9 +38,17 @@
     <string name="habit_day_unchecked">未打卡</string>
     <string name="habit_day_today_unchecked">今日尚未打卡</string>
     <string name="habit_day_before_creation">创建前</string>
-    <string name="stats_today_done">今日完成</string>
     <string name="stats_recent_seven_day_goal_rate">近 7 天目标达成率</string>
-    <string name="stats_best_streak">最长连续打卡</string>
-    <string name="stats_total_done">总打卡次数</string>
-    <string name="stats_total_habits">习惯数量</string>
+    <string name="stats_recent_seven_day_goal_rate_compact">近 7 天\n目标达成率</string>
+    <string name="stats_today_persistence">今天的坚持</string>
+    <string name="stats_recent_checkin_footprint">近 7 天打卡足迹</string>
+    <string name="stats_daily_completed_habits">每天完成打卡的习惯数</string>
+    <string name="stats_today_short">今天</string>
+    <string name="stats_daily_checkin_description">%1$s，%2$d 次打卡</string>
+    <string name="stats_effective_goal_note">按各习惯有效目标汇总</string>
+    <string name="stats_existing_habits_total_checkins">现有习惯累计打卡</string>
+    <string name="stats_single_habit_historical_longest">单项习惯历史最长连续</string>
+    <string name="stats_times">次</string>
+    <string name="stats_days">天</string>
+    <string name="stats_hero_motto">每一次坚持，\n都在留下印记。</string>
 </resources>

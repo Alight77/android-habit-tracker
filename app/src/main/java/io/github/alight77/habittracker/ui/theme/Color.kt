@@ -3,6 +3,9 @@ package io.github.alight77.habittracker.ui.theme
 import androidx.compose.ui.graphics.Color
 
 internal val CreamBackground = Color(0xFFFDF8F1)
+internal val WarmPaperTop = Color(0xFFFFEECF)
+internal val WarmPaperMiddle = Color(0xFFFFF6E7)
+internal val WarmPaperBottom = Color(0xFFEEF2E3)
 internal val PaperSurface = Color(0xFFFFFCF7)
 internal val WarmSurfaceVariant = Color(0xFFF6F2EB)
 internal val Ink = Color(0xFF20282A)
