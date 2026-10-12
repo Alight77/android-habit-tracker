@@ -271,7 +271,7 @@ private fun DashboardBody(
                 val density = LocalDensity.current
                 // 空状态在页头与底部操作区之间居中；测量实际页头高度以适应字号和窄屏。
                 val emptyMinHeight = (
-                    maxHeight - with(density) { headerHeightPx.toDp() } - 88.dp
+                    this.maxHeight - with(density) { headerHeightPx.toDp() } - 88.dp
                 ).coerceAtLeast(0.dp)
 
                 LazyColumn(
@@ -384,7 +384,7 @@ private fun LoadingDashboard(modifier: Modifier = Modifier) {
 @Composable
 private fun ErrorDashboard(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val viewportHeight = maxHeight
+        val viewportHeight = this.maxHeight
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             // 短屏或大字号时允许滚动到重试按钮；空间足够时仍保持状态卡片居中。
             Box(

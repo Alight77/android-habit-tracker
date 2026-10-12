@@ -1,13 +1,12 @@
 package io.github.alight77.habittracker.feature.stats
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -21,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.Lifecycle
@@ -89,35 +87,27 @@ fun StatsContent(
         ) { padding ->
             when (uiState) {
                 StatsUiState.Loading -> {
-                    Text(
-                        text = "加载中...",
-                        modifier = Modifier
-                            .padding(padding)
-                            .padding(16.dp)
-                    )
+                    LoadingStats(modifier = Modifier.padding(padding))
                 }
 
                 is StatsUiState.Error -> {
-                    Column(
-                        modifier = Modifier
-                            .padding(padding)
-                            .padding(16.dp)
-                    ) {
-                        Text(uiState.message)
-                        Button(
-                            onClick = onRetry,
-                            modifier = Modifier.padding(top = 12.dp)
-                        ) {
-                            Text(stringResource(R.string.retry))
-                        }
-                    }
+                    ErrorStats(
+                        message = uiState.message,
+                        onRetry = onRetry,
+                        modifier = Modifier.padding(padding)
+                    )
                 }
 
                 is StatsUiState.Success -> {
-                    StatsSuccessContent(
-                        summary = uiState.summary,
-                        modifier = Modifier.padding(padding)
-                    )
+                    if (uiState.summary.totalHabits == 0) {
+                        // 零习惯仍保留统计计算结果，但不把七个零值展示成已有打卡足迹。
+                        EmptyStats(modifier = Modifier.padding(padding))
+                    } else {
+                        StatsSuccessContent(
+                            summary = uiState.summary,
+                            modifier = Modifier.padding(padding)
+                        )
+                    }
                 }
             }
         }
@@ -141,6 +131,43 @@ fun StatsContentPreview() {
                     }
                 )
             ),
+            onRetry = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Stats - Empty")
+@Preview(showBackground = true, name = "Stats - Empty Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(showBackground = true, name = "Stats - Empty 320dp 2x", widthDp = 320, fontScale = 2f)
+@Composable
+fun StatsContentEmptyPreview() {
+    HabitTrackerTheme {
+        StatsContent(
+            uiState = StatsUiState.Success(
+                StatsSummary(0, 0, 0, 0, 0, emptyList())
+            ),
+            onRetry = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Stats - Loading")
+@Preview(showBackground = true, name = "Stats - Loading Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun StatsContentLoadingPreview() {
+    HabitTrackerTheme {
+        StatsContent(uiState = StatsUiState.Loading, onRetry = {})
+    }
+}
+
+@Preview(showBackground = true, name = "Stats - Error")
+@Preview(showBackground = true, name = "Stats - Error Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(showBackground = true, name = "Stats - Error 320dp 2x", widthDp = 320, fontScale = 2f)
+@Composable
+fun StatsContentErrorPreview() {
+    HabitTrackerTheme {
+        StatsContent(
+            uiState = StatsUiState.Error("加载统计数据失败，请重试"),
             onRetry = {}
         )
     }

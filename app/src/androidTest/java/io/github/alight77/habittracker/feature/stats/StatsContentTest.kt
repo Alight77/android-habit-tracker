@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -28,6 +31,84 @@ class StatsContentTest {
 
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun noHabitsShowsGuidanceInsteadOfZeroFootprint() {
+        composeRule.setContent {
+            StatsContent(
+                uiState = StatsUiState.Success(
+                    StatsSummary(
+                        totalHabits = 0,
+                        todayDoneCount = 0,
+                        totalDoneCount = 0,
+                        recentSevenDayGoalPercent = 0,
+                        longestStreak = 0,
+                        recentSevenDayCounts = (6L downTo 0L).map { daysAgo ->
+                            DailyCheckInCount(LocalDate.of(2026, 10, 11).minusDays(daysAgo), 0)
+                        }
+                    )
+                ),
+                onRetry = {}
+            )
+        }
+
+        composeRule.onNodeWithText("从一个小习惯开始").assertIsDisplayed()
+        composeRule.onNodeWithText("切换到今日，创建第一个习惯").assertIsDisplayed()
+        composeRule.onNodeWithText("近 7 天打卡足迹").assertDoesNotExist()
+    }
+
+    @Test
+    fun loadingShowsSharedStatusLabelWithoutMetrics() {
+        composeRule.setContent {
+            StatsContent(uiState = StatsUiState.Loading, onRetry = {})
+        }
+
+        composeRule.onNodeWithText("加载中…").assertIsDisplayed()
+        composeRule.onNodeWithText("今天的坚持").assertDoesNotExist()
+    }
+
+    @Test
+    fun habitWithNoCheckInsStillShowsSevenDayFootprint() {
+        composeRule.setContent {
+            StatsContent(
+                uiState = StatsUiState.Success(
+                    StatsSummary(
+                        totalHabits = 1,
+                        todayDoneCount = 0,
+                        totalDoneCount = 0,
+                        recentSevenDayGoalPercent = 0,
+                        longestStreak = 0,
+                        recentSevenDayCounts = (6L downTo 0L).map { daysAgo ->
+                            DailyCheckInCount(LocalDate.of(2026, 10, 11).minusDays(daysAgo), 0)
+                        }
+                    )
+                ),
+                onRetry = {}
+            )
+        }
+
+        composeRule.onNodeWithText("近 7 天打卡足迹").assertIsDisplayed()
+        composeRule.onNodeWithText("切换到今日，创建第一个习惯").assertDoesNotExist()
+    }
+
+    @Test
+    fun errorReplacesPreviouslyDisplayedSuccessMetrics() {
+        var state by mutableStateOf<StatsUiState>(
+            StatsUiState.Success(
+                StatsSummary(1, 0, 0, 0, 0, emptyList())
+            )
+        )
+        composeRule.setContent {
+            StatsContent(uiState = state, onRetry = {})
+        }
+
+        composeRule.onNodeWithText("今天的坚持").assertIsDisplayed()
+        composeRule.runOnUiThread {
+            state = StatsUiState.Error("加载统计数据失败，请重试")
+        }
+        composeRule.onNodeWithText("加载统计数据失败，请重试").assertIsDisplayed()
+        composeRule.onNodeWithText("今天的坚持").assertDoesNotExist()
+    }
 
     @Test
     fun summaryLabelsRecentRateAsGoalAchievement() {
