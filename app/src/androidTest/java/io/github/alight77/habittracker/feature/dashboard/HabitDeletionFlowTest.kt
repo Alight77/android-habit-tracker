@@ -78,7 +78,6 @@ class HabitDeletionFlowTest {
             DashboardScreen(
                 viewModel = dashboard,
                 onAddClick = {},
-                onStatsClick = {},
                 onEditClick = {}
             )
         }
@@ -154,7 +153,6 @@ class HabitDeletionFlowTest {
             DashboardScreen(
                 viewModel = dashboard,
                 onAddClick = {},
-                onStatsClick = {},
                 onEditClick = {}
             )
         }

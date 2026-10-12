@@ -48,7 +48,6 @@ class StatsContentTest {
                         }
                     )
                 ),
-                onBackClick = {},
                 onRetry = {}
             )
         }
@@ -76,7 +75,6 @@ class StatsContentTest {
                         }
                     )
                 ),
-                onBackClick = {},
                 onRetry = {}
             )
         }
@@ -119,7 +117,6 @@ class StatsContentTest {
                                 }
                             )
                         ),
-                        onBackClick = {},
                         onRetry = {}
                     )
                 }
@@ -141,15 +138,15 @@ class StatsContentTest {
     }
 
     @Test
-    fun backButton_exposesContentDescription() {
+    fun topLevelStatsHasNoBackButton() {
         composeRule.setContent {
             StatsContent(
                 uiState = StatsUiState.Loading,
-                onBackClick = {},
                 onRetry = {}
             )
         }
 
-        composeRule.onNodeWithContentDescription("返回").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("返回").assertDoesNotExist()
+        composeRule.onNodeWithText("成长记录").assertIsDisplayed()
     }
 }

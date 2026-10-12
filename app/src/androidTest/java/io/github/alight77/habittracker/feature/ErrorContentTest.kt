@@ -29,7 +29,6 @@ class ErrorContentTest {
                 uiState = DashboardUiState.Error("加载习惯数据失败，请重试"),
                 onCheckClick = { _ -> },
                 onAddClick = {},
-                onStatsClick = {},
                 onEditClick = {},
                 onDeleteHabit = {},
                 onRetry = { retryCount.incrementAndGet() }
@@ -47,7 +46,6 @@ class ErrorContentTest {
         composeRule.setContent {
             StatsContent(
                 uiState = StatsUiState.Error("加载统计数据失败，请重试"),
-                onBackClick = {},
                 onRetry = { retryCount.incrementAndGet() }
             )
         }

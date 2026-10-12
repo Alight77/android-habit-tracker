@@ -45,7 +45,6 @@ class DashboardContentTest {
                 uiState = DashboardUiState.Success(emptyList(), LocalDate.of(2026, 10, 11)),
                 onCheckClick = {},
                 onAddClick = {},
-                onStatsClick = {},
                 onEditClick = {},
                 onDeleteHabit = {},
                 onRetry = {}
@@ -76,7 +75,6 @@ class DashboardContentTest {
                     uiState = state.value,
                     onCheckClick = {},
                     onAddClick = {},
-                    onStatsClick = {},
                     onEditClick = {},
                     onDeleteHabit = {},
                     onRetry = { retryCount.incrementAndGet() }
@@ -112,7 +110,6 @@ class DashboardContentTest {
                             uiState = DashboardUiState.Error("加载习惯数据失败，请重试"),
                             onCheckClick = {},
                             onAddClick = {},
-                            onStatsClick = {},
                             onEditClick = {},
                             onDeleteHabit = {},
                             onRetry = { retryCount.incrementAndGet() }
@@ -137,7 +134,6 @@ class DashboardContentTest {
                 uiState = state.value,
                 onCheckClick = {},
                 onAddClick = {},
-                onStatsClick = {},
                 onEditClick = {},
                 onDeleteHabit = {},
                 onRetry = {}
@@ -175,7 +171,6 @@ class DashboardContentTest {
                 uiState = DashboardUiState.Success(items, LocalDate.of(2026, 10, 11)),
                 onCheckClick = {},
                 onAddClick = {},
-                onStatsClick = {},
                 onEditClick = {},
                 onDeleteHabit = {},
                 onRetry = {}
@@ -208,7 +203,6 @@ class DashboardContentTest {
                 ),
                 onCheckClick = { _ -> },
                 onAddClick = {},
-                onStatsClick = {},
                 onEditClick = { editedHabitId.set(it) },
                 onDeleteHabit = { deletedHabitId.set(it) },
                 onRetry = {}
@@ -237,7 +231,6 @@ class DashboardContentTest {
                 uiState = DashboardUiState.Success(emptyList(), LocalDate.of(2026, 9, 19)),
                 onCheckClick = { _ -> },
                 onAddClick = { addClickCount.incrementAndGet() },
-                onStatsClick = {},
                 onEditClick = {},
                 onDeleteHabit = {},
                 onRetry = {}
@@ -257,7 +250,6 @@ class DashboardContentTest {
                 uiState = singleHabitState(),
                 onCheckClick = {},
                 onAddClick = {},
-                onStatsClick = {},
                 onEditClick = {},
                 onDeleteHabit = { deletedHabitId.set(it) },
                 onRetry = {}
@@ -283,7 +275,6 @@ class DashboardContentTest {
                 uiState = singleHabitState(),
                 onCheckClick = {},
                 onAddClick = {},
-                onStatsClick = {},
                 onEditClick = {},
                 onDeleteHabit = { deletedHabitIds += it },
                 onRetry = {}

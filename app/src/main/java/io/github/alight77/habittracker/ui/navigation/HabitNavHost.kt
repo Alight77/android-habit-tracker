@@ -5,6 +5,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavType
 import androidx.navigation.NavHostController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -19,12 +20,20 @@ import io.github.alight77.habittracker.feature.edit.EditHabitViewModelFactory
 import io.github.alight77.habittracker.feature.stats.StatsScreen
 import io.github.alight77.habittracker.feature.stats.StatsViewModel
 
-private const val ROUTE_DASHBOARD = "dashboard"
 private const val ROUTE_ADD_HABIT = "addHabit"
-private const val ROUTE_STATS = "stats"
 private const val ROUTE_EDIT_HABIT = "editHabit/{habitId}"
 
 private fun editHabitRoute(habitId: Int): String = "editHabit/$habitId"
+
+private fun NavHostController.navigateToTopLevel(destination: TopLevelDestination) {
+    if (currentDestination?.route == destination.route) return
+    navigate(destination.route) {
+        launchSingleTop = true
+        restoreState = true
+        // 只保留首页作为活动返回路径；切换时保存另一 Tab 的可保存页面状态。
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+    }
+}
 
 @Composable
 fun HabitNavHost(
@@ -36,19 +45,19 @@ fun HabitNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = ROUTE_DASHBOARD
+        startDestination = TopLevelDestination.Today.route
     ) {
-        composable(ROUTE_DASHBOARD) {
+        composable(TopLevelDestination.Today.route) {
             DashboardScreen(
                 viewModel = dashboardViewModel,
                 onAddClick = {
                     navController.navigate(ROUTE_ADD_HABIT)
                 },
-                onStatsClick = {
-                    navController.navigate(ROUTE_STATS)
-                },
                 onEditClick = { habitId ->
                     navController.navigate(editHabitRoute(habitId))
+                },
+                bottomBar = {
+                    HabitBottomBar(TopLevelDestination.Today, navController::navigateToTopLevel)
                 }
             )
         }
@@ -62,11 +71,11 @@ fun HabitNavHost(
             )
         }
 
-        composable(ROUTE_STATS) {
+        composable(TopLevelDestination.Stats.route) {
             StatsScreen(
                 viewModel = statsViewModel,
-                onBackClick = {
-                    navController.popBackStack()
+                bottomBar = {
+                    HabitBottomBar(TopLevelDestination.Stats, navController::navigateToTopLevel)
                 }
             )
         }

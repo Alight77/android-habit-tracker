@@ -89,8 +89,8 @@ import io.github.alight77.habittracker.ui.theme.WarmPaperTop
 fun DashboardScreen(
     viewModel: DashboardViewModel,
     onAddClick: () -> Unit,
-    onStatsClick: () -> Unit,
-    onEditClick: (Int) -> Unit
+    onEditClick: (Int) -> Unit,
+    bottomBar: @Composable () -> Unit = {}
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
     val snackbarHostState = remember { SnackbarHostState() }
@@ -115,10 +115,10 @@ fun DashboardScreen(
         snackbarHostState = snackbarHostState,
         onCheckClick = viewModel::onHabitToggle,
         onAddClick = onAddClick,
-        onStatsClick = onStatsClick,
         onEditClick = onEditClick,
         onDeleteHabit = viewModel::deleteHabit,
-        onRetry = viewModel::retry
+        onRetry = viewModel::retry,
+        bottomBar = bottomBar
     )
 }
 
@@ -129,10 +129,10 @@ private fun DashboardScaffold(
     snackbarHostState: SnackbarHostState?,
     onCheckClick: (Int) -> Unit,
     onAddClick: () -> Unit,
-    onStatsClick: () -> Unit,
     onEditClick: (Int) -> Unit,
     onDeleteHabit: (Int) -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    bottomBar: @Composable () -> Unit
 ) {
     val addHabitContentDescription = stringResource(R.string.add_habit)
     val colors = MaterialTheme.colorScheme
@@ -189,20 +189,6 @@ private fun DashboardScaffold(
                             overflow = TextOverflow.Ellipsis
                         )
                     },
-                    actions = {
-                        TextButton(onClick = onStatsClick) {
-                            Text(
-                                text = stringResource(R.string.statistics),
-                                color = colors.primary,
-                                modifier = Modifier
-                                    .background(
-                                        colors.surface.copy(alpha = 0.88f),
-                                        RoundedCornerShape(50)
-                                    )
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
-                        }
-                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
                         titleContentColor = colors.onBackground
@@ -214,6 +200,7 @@ private fun DashboardScaffold(
                     SnackbarHost(snackbarHostState)
                 }
             },
+            bottomBar = bottomBar,
             floatingActionButton = {
                 FloatingActionButton(
                     modifier = Modifier.semantics {
@@ -245,20 +232,20 @@ fun DashboardContent(
     uiState: DashboardUiState,
     onCheckClick: (Int) -> Unit,
     onAddClick: () -> Unit,
-    onStatsClick: () -> Unit,
     onEditClick: (Int) -> Unit,
     onDeleteHabit: (Int) -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    bottomBar: @Composable () -> Unit = {}
 ) {
     DashboardScaffold(
         uiState = uiState,
         snackbarHostState = null,
         onCheckClick = onCheckClick,
         onAddClick = onAddClick,
-        onStatsClick = onStatsClick,
         onEditClick = onEditClick,
         onDeleteHabit = onDeleteHabit,
-        onRetry = onRetry
+        onRetry = onRetry,
+        bottomBar = bottomBar
     )
 }
 
@@ -493,7 +480,6 @@ fun DashboardContentSuccessPreview() {
         uiState = previewState,
         onCheckClick = { _ -> },
         onAddClick = {},
-        onStatsClick = {},
         onEditClick = {},
         onDeleteHabit = {},
         onRetry = {}
@@ -510,7 +496,6 @@ fun DashboardContentEmptyPreview() {
             uiState = DashboardUiState.Success(emptyList(), LocalDate.of(2026, 10, 11)),
             onCheckClick = { _ -> },
             onAddClick = {},
-            onStatsClick = {},
             onEditClick = {},
             onDeleteHabit = {},
             onRetry = {}
@@ -527,7 +512,6 @@ fun DashboardContentLoadingPreview() {
             uiState = DashboardUiState.Loading,
             onCheckClick = { _ -> },
             onAddClick = {},
-            onStatsClick = {},
             onEditClick = {},
             onDeleteHabit = {},
             onRetry = {}
@@ -545,7 +529,6 @@ fun DashboardContentErrorPreview() {
             uiState = DashboardUiState.Error("加载习惯数据失败，请重试"),
             onCheckClick = { _ -> },
             onAddClick = {},
-            onStatsClick = {},
             onEditClick = {},
             onDeleteHabit = {},
             onRetry = {}

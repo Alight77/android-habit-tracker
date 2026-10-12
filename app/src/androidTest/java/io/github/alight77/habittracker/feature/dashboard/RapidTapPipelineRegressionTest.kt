@@ -95,7 +95,6 @@ class RapidTapPipelineRegressionTest {
                 DashboardScreen(
                     viewModel = viewModel,
                     onAddClick = {},
-                    onStatsClick = {},
                     onEditClick = {}
                 )
             }

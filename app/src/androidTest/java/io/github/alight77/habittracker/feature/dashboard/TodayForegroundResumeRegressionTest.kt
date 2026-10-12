@@ -74,7 +74,7 @@ class TodayForegroundResumeRegressionTest {
                 requestTodayRefresh = dateSource::refresh
             )
             composeRule.setContent {
-                DashboardScreen(viewModel, onAddClick = {}, onStatsClick = {}, onEditClick = {})
+                DashboardScreen(viewModel, onAddClick = {}, onEditClick = {})
             }
             composeRule.waitUntil(5_000L) {
                 (viewModel.uiState.value as? DashboardUiState.Success)
