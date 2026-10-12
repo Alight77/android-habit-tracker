@@ -249,6 +249,7 @@ private fun GoalRateSection(summary: StatsSummary) {
     val colors = MaterialTheme.colorScheme
     val percent = summary.recentSevenDayGoalPercent.coerceIn(0, 100)
     val largeText = LocalDensity.current.fontScale >= 1.5f
+    val progressDescription = stringResource(R.string.stats_goal_rate_accessibility, percent)
     SectionTitle(
         stringResource(
             if (largeText) R.string.stats_recent_seven_day_goal_rate_compact
@@ -299,6 +300,8 @@ private fun GoalRateSection(summary: StatsSummary) {
             .clip(RoundedCornerShape(50))
             .background(colors.surfaceVariant)
             .semantics {
+                // 进度条单独获得焦点时，明确它表示目标达成率，而非七日打卡次数。
+                contentDescription = progressDescription
                 progressBarRangeInfo = ProgressBarRangeInfo(percent / 100f, 0f..1f)
             }
     ) {

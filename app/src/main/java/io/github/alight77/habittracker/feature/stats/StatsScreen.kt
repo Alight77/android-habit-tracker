@@ -114,7 +114,9 @@ fun StatsContent(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Stats - Success")
+@Preview(showBackground = true, name = "Stats - Success Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(showBackground = true, name = "Stats - Success 320dp 2x", widthDp = 320, fontScale = 2f)
 @Composable
 fun StatsContentPreview() {
     HabitTrackerTheme {

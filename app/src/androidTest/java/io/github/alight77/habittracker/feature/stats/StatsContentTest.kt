@@ -134,6 +134,9 @@ class StatsContentTest {
         }
 
         composeRule.onNodeWithText("近 7 天目标达成率").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("近 7 天目标达成率，100%")
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     @Test
@@ -211,6 +214,12 @@ class StatsContentTest {
             val bounds = composeRule.onNodeWithText(value).fetchSemanticsNode().boundsInRoot
             assertTrue("$value exceeds 320dp", bounds.right <= rightEdge + 1f)
         }
+        composeRule.onNodeWithContentDescription("今天，9999 次打卡")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("近 7 天目标达成率，71%")
+            .performScrollTo()
+            .assertIsDisplayed()
         listOf("1234567", "234567").forEach { value ->
             composeRule.onNodeWithText(value).performScrollTo().assertIsDisplayed()
             val bounds = composeRule.onNodeWithText(value).fetchSemanticsNode().boundsInRoot

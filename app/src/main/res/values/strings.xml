@@ -43,6 +43,7 @@
     <string name="habit_day_today_unchecked">今日尚未打卡</string>
     <string name="habit_day_before_creation">创建前</string>
     <string name="stats_recent_seven_day_goal_rate">近 7 天目标达成率</string>
+    <string name="stats_goal_rate_accessibility">近 7 天目标达成率，%1$d%%</string>
     <string name="stats_recent_seven_day_goal_rate_compact">近 7 天\n目标达成率</string>
     <string name="stats_today_persistence">今天的坚持</string>
     <string name="stats_recent_checkin_footprint">近 7 天打卡足迹</string>
