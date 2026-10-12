@@ -97,8 +97,9 @@ class EditHabitScreenTest {
         composeRule.onNodeWithText("3 次 / 周").assertIsDisplayed()
         composeRule.onNode(hasSetTextAction()).performTextClearance()
         composeRule.onNode(hasSetTextAction()).performTextInput("晨读")
-        repeat(2) { composeRule.onNodeWithText("＋").performClick() }
-        composeRule.onNodeWithText("5 次 / 周").assertIsDisplayed()
+        repeat(2) { composeRule.onNodeWithText("＋").performScrollTo().performClick() }
+        // 大字号加键盘时目标值可位于视口下方；验证它可滚动到达后再保存。
+        composeRule.onNodeWithText("5 次 / 周").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("保存修改").performScrollTo().performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
 
