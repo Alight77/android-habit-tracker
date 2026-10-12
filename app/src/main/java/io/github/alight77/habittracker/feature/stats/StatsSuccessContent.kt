@@ -70,6 +70,11 @@ internal fun StatsSuccessContent(summary: StatsSummary, modifier: Modifier = Mod
 @Composable
 private fun TodayOverview(summary: StatsSummary) {
     val colors = MaterialTheme.colorScheme
+    val countDescription = stringResource(
+        R.string.stats_today_count_accessibility,
+        summary.todayDoneCount,
+        summary.totalHabits
+    )
     val hasWideCount = summary.todayDoneCount >= 10 || summary.totalHabits >= 10
     val textMeasurer = rememberTextMeasurer()
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -106,10 +111,15 @@ private fun TodayOverview(summary: StatsSummary) {
                 Spacer(Modifier.height(if (showArtwork) 36.dp else 20.dp))
                 if (countSize == null) {
                     // 极端长数字保留完整分子和分母，允许总览自然增高。
-                    Text(doneText, color = colors.primary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text("/ $totalText", color = colors.onBackground, fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold)
-                } else Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.clearAndSetSemantics { contentDescription = countDescription }) {
+                        Text(doneText, color = colors.primary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text("/ $totalText", color = colors.onBackground, fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold)
+                    }
+                } else Row(
+                    modifier = Modifier.clearAndSetSemantics { contentDescription = countDescription },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = doneText,
                         color = colors.primary,
@@ -362,7 +372,9 @@ private fun HistoryMetrics(summary: StatsSummary) {
 private fun HistoryMetric(label: String, value: Int, unit: String, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
     val textMeasurer = rememberTextMeasurer()
-    Column(modifier = modifier) {
+    val description = stringResource(R.string.stats_history_metric_accessibility, label, value, unit)
+    // 标签、数值和单位作为一个焦点朗读，避免单独的数字失去指标上下文。
+    Column(modifier = modifier.clearAndSetSemantics { contentDescription = description }) {
         Text(
             text = label,
             color = colors.onBackground,

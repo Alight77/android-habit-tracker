@@ -165,6 +165,8 @@ class StatsContentTest {
 
         composeRule.onNodeWithText("成长记录").assertIsDisplayed()
         composeRule.onNodeWithText("今天的坚持").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("今天已完成 2 个习惯，共 3 个")
+            .assertIsDisplayed()
         composeRule.onNodeWithText("近 7 天打卡足迹").assertIsDisplayed()
         listOf(
             "周一，1 次打卡", "周二，3 次打卡", "周三，2 次打卡", "周四，0 次打卡",
@@ -173,10 +175,12 @@ class StatsContentTest {
             composeRule.onNodeWithContentDescription(description).assertIsDisplayed()
         }
         composeRule.onNodeWithText("71%").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("现有习惯累计打卡").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("单项习惯历史最长连续").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("18").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("5").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("现有习惯累计打卡，18 次")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("单项习惯历史最长连续，5 天")
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     @Test
@@ -210,10 +214,10 @@ class StatsContentTest {
         val rightEdge = composeRule.onNodeWithTag("narrowStats")
             .fetchSemanticsNode().boundsInRoot.right -
             24f * composeRule.activity.resources.displayMetrics.density
-        listOf("9999", "10000").forEach { value ->
-            val bounds = composeRule.onNodeWithText(value).fetchSemanticsNode().boundsInRoot
-            assertTrue("$value exceeds 320dp", bounds.right <= rightEdge + 1f)
-        }
+        val todayBounds = composeRule
+            .onNodeWithContentDescription("今天已完成 9999 个习惯，共 10000 个")
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue("today count exceeds 320dp", todayBounds.right <= rightEdge + 1f)
         composeRule.onNodeWithContentDescription("今天，9999 次打卡")
             .performScrollTo()
             .assertIsDisplayed()
@@ -221,8 +225,11 @@ class StatsContentTest {
             .performScrollTo()
             .assertIsDisplayed()
         listOf("1234567", "234567").forEach { value ->
-            composeRule.onNodeWithText(value).performScrollTo().assertIsDisplayed()
-            val bounds = composeRule.onNodeWithText(value).fetchSemanticsNode().boundsInRoot
+            composeRule.onNodeWithText(value, useUnmergedTree = true)
+                .performScrollTo()
+                .assertIsDisplayed()
+            val bounds = composeRule.onNodeWithText(value, useUnmergedTree = true)
+                .fetchSemanticsNode().boundsInRoot
             assertTrue("$value exceeds 320dp", bounds.right <= rightEdge + 1f)
         }
     }
