@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -120,6 +121,77 @@ class EditHabitScreenTest {
             ),
             runBlocking { database.habitDao().getHabitById(habitId) }
         )
+    }
+
+    @Test
+    fun savedIcon_manualSelectionAndRecommendation_updateRoomOnlyOnSave() {
+        runBlocking {
+            database.habitDao().insertHabit(
+                HabitEntity(name = "阅读", description = "", targetPerWeek = 3, createdAt = 100L, iconKey = "reading")
+            )
+        }
+        val habitId = runBlocking { database.habitDao().getAllHabits().first().single().id }
+        val backClickCount = AtomicInteger(0)
+        val stableViewModel = EditHabitViewModel(HabitRepository(database.habitDao(), database.recordDao()), habitId)
+        composeRule.setContent {
+            EditHabitScreen(stableViewModel, onBackClick = { backClickCount.incrementAndGet() })
+        }
+        composeRule.onNodeWithTag("habit_preview_icon_reading").assertExists()
+        composeRule.onNodeWithTag("habit_choose_icon").performScrollTo().performClick()
+        composeRule.onNodeWithTag("habit_icon_option_reading").assertIsSelected()
+        composeRule.onNodeWithTag("habit_icon_option_water").performScrollTo().performClick()
+        assertEquals("reading", runBlocking { database.habitDao().getHabitById(habitId)?.iconKey })
+        stableViewModel.onNameChanged("晨跑")
+        composeRule.onNodeWithTag("habit_preview_icon_water").assertExists()
+        composeRule.onNodeWithTag("habit_icon_action").performScrollTo().performClick()
+        composeRule.onNodeWithTag("habit_preview_icon_exercise").assertExists()
+        stableViewModel.onNameChanged("健康餐")
+        composeRule.onNodeWithTag("habit_preview_icon_exercise").assertExists()
+        composeRule.onNodeWithText("保存修改").performScrollTo().performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
+        assertEquals("exercise", runBlocking { database.habitDao().getHabitById(habitId)?.iconKey })
+    }
+
+    @Test
+    fun unknownIcon_showsFallbackAndPreservesRawKeyWhenOnlyNameChanges() {
+        runBlocking {
+            database.habitDao().insertHabit(
+                HabitEntity(name = "旧习惯", description = "", targetPerWeek = 3, createdAt = 100L, iconKey = "cycling")
+            )
+        }
+        val habitId = runBlocking { database.habitDao().getAllHabits().first().single().id }
+        val backClickCount = AtomicInteger(0)
+        val stableViewModel = EditHabitViewModel(HabitRepository(database.habitDao(), database.recordDao()), habitId)
+        composeRule.setContent {
+            EditHabitScreen(stableViewModel, onBackClick = { backClickCount.incrementAndGet() })
+        }
+        composeRule.onNodeWithTag("habit_preview_icon_general").assertExists()
+        composeRule.onNodeWithText("图标 · 原图标暂不可用，预览显示通用").assertExists()
+        stableViewModel.onNameChanged("晨跑")
+        composeRule.onNodeWithText("保存修改").performScrollTo().performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
+        assertEquals("cycling", runBlocking { database.habitDao().getHabitById(habitId)?.iconKey })
+    }
+
+    @Test
+    fun unsavedIconSelection_backDoesNotUpdateRoom() {
+        runBlocking {
+            database.habitDao().insertHabit(
+                HabitEntity(name = "阅读", description = "", targetPerWeek = 3, createdAt = 100L, iconKey = "reading")
+            )
+        }
+        val habitId = runBlocking { database.habitDao().getAllHabits().first().single().id }
+        val backClickCount = AtomicInteger(0)
+        val stableViewModel = EditHabitViewModel(HabitRepository(database.habitDao(), database.recordDao()), habitId)
+        composeRule.setContent {
+            EditHabitScreen(stableViewModel, onBackClick = { backClickCount.incrementAndGet() })
+        }
+        composeRule.onNodeWithTag("habit_choose_icon").performScrollTo().performClick()
+        composeRule.onNodeWithTag("habit_icon_option_water").performScrollTo().performClick()
+        composeRule.onNodeWithTag("habit_preview_icon_water").assertExists()
+        composeRule.onNodeWithContentDescription("返回").performClick()
+        assertEquals(1, backClickCount.get())
+        assertEquals("reading", runBlocking { database.habitDao().getHabitById(habitId)?.iconKey })
     }
 
     @Test

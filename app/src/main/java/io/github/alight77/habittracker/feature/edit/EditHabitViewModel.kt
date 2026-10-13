@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.repository.HabitRepository
+import io.github.alight77.habittracker.domain.icon.HabitIconMatcher
+import io.github.alight77.habittracker.domain.icon.IconKey
 import io.github.alight77.habittracker.domain.model.WeeklyTargetConstraints.MAX_TARGET_PER_WEEK
 import io.github.alight77.habittracker.domain.model.WeeklyTargetConstraints.MIN_TARGET_PER_WEEK
 import kotlinx.coroutines.CancellationException
@@ -21,6 +23,8 @@ import kotlinx.coroutines.launch
 
 data class EditHabitUiState(
     val name: String = "",
+    // 原始未知 Key 同样保存在草稿中；仅在展示时由 Catalog 回退。
+    val iconKey: IconKey = IconKey.GENERAL,
     val targetPerWeek: Int = MAX_TARGET_PER_WEEK,
     val nameError: String? = null,
     val isLoading: Boolean = true,
@@ -57,19 +61,34 @@ class EditHabitViewModel(
 
     fun onNameChanged(name: String) {
         _uiState.update { state ->
-            state.copy(name = name, nameError = null)
+            if (state.isLoading || state.isSaving || state.loadError != null) state
+            else state.copy(name = name, nameError = null)
+        }
+    }
+
+    fun selectIcon(key: IconKey) {
+        _uiState.update { state ->
+            if (state.isLoading || state.isSaving || state.loadError != null || key !in IconKey.known) state
+            else state.copy(iconKey = key)
+        }
+    }
+
+    fun recommendIconForCurrentName() {
+        _uiState.update { state ->
+            if (state.isLoading || state.isSaving || state.loadError != null) state
+            else state.copy(iconKey = HabitIconMatcher.match(state.name))
         }
     }
 
     fun decreaseTargetPerWeek() {
         _uiState.update { state ->
-            state.copy(targetPerWeek = (state.targetPerWeek - 1).coerceAtLeast(MIN_TARGET_PER_WEEK))
+            if (state.isSaving) state else state.copy(targetPerWeek = (state.targetPerWeek - 1).coerceAtLeast(MIN_TARGET_PER_WEEK))
         }
     }
 
     fun increaseTargetPerWeek() {
         _uiState.update { state ->
-            state.copy(targetPerWeek = (state.targetPerWeek + 1).coerceAtMost(MAX_TARGET_PER_WEEK))
+            if (state.isSaving) state else state.copy(targetPerWeek = (state.targetPerWeek + 1).coerceAtMost(MAX_TARGET_PER_WEEK))
         }
     }
 
@@ -96,7 +115,8 @@ class EditHabitViewModel(
                 repository.updateHabit(
                     habit.copy(
                         name = normalizedName,
-                        targetPerWeek = state.targetPerWeek
+                        targetPerWeek = state.targetPerWeek,
+                        iconKey = state.iconKey.value
                     )
                 )
                 _uiState.value = EditHabitUiState(
@@ -140,6 +160,7 @@ class EditHabitViewModel(
                 loadedHabit = habit
                 _uiState.value = EditHabitUiState(
                     name = habit.name,
+                    iconKey = IconKey(habit.iconKey),
                     targetPerWeek = habit.targetPerWeek,
                     isLoading = false
                 )

@@ -16,8 +16,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -27,7 +29,9 @@ import androidx.lifecycle.repeatOnLifecycle
 import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.ui.component.HabitFormContent
 import io.github.alight77.habittracker.ui.component.HabitFormHero
+import io.github.alight77.habittracker.ui.component.HabitIconPicker
 import io.github.alight77.habittracker.ui.component.HabitFormPageScaffold
+import io.github.alight77.habittracker.ui.icon.HabitIconCatalog
 
 @Composable
 fun EditHabitScreen(
@@ -36,7 +40,26 @@ fun EditHabitScreen(
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
     val snackbarHostState = remember { SnackbarHostState() }
+    val showIconPicker = remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val resolvedIcon = HabitIconCatalog.resolveForDisplay(uiState.iconKey)
+    val iconStatus = if (resolvedIcon.originalKey != resolvedIcon.definition.key) {
+        stringResource(R.string.habit_icon_unknown_status)
+    } else {
+        stringResource(R.string.habit_icon_saved_status, stringResource(resolvedIcon.definition.labelRes))
+    }
+
+    if (showIconPicker.value && !uiState.isLoading && !uiState.isSaving && uiState.loadError == null) {
+        HabitIconPicker(
+            selectedKey = uiState.iconKey,
+            onSelect = { key ->
+                viewModel.selectIcon(key)
+                showIconPicker.value = false
+            },
+            onDismiss = { showIconPicker.value = false }
+        )
+    }
 
     LaunchedEffect(viewModel, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -116,7 +139,15 @@ fun EditHabitScreen(
                         onIncreaseTarget = viewModel::increaseTargetPerWeek,
                         onSave = viewModel::saveHabit,
                         saveLabel = stringResource(R.string.save_changes),
-                        showNameSuggestions = false
+                        showNameSuggestions = false,
+                        iconKey = uiState.iconKey,
+                        iconStatus = iconStatus,
+                        onChooseIcon = {
+                            keyboardController?.hide()
+                            showIconPicker.value = true
+                        },
+                        iconActionLabel = stringResource(R.string.habit_icon_recommend_now),
+                        onIconAction = viewModel::recommendIconForCurrentName
                     )
                 }
             }

@@ -5,6 +5,7 @@ import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.local.RecordDao
 import io.github.alight77.habittracker.data.local.RecordEntity
 import io.github.alight77.habittracker.data.repository.HabitRepository
+import io.github.alight77.habittracker.domain.icon.IconKey
 import io.github.alight77.habittracker.testutil.MainDispatcherRule
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -48,6 +49,7 @@ class EditHabitViewModelTest {
 
         assertEquals("阅读", viewModel.uiState.value.name)
         assertEquals(3, viewModel.uiState.value.targetPerWeek)
+        assertEquals(IconKey("cycling"), viewModel.uiState.value.iconKey)
 
         viewModel.onNameChanged("晨读")
         repeat(2) { viewModel.increaseTargetPerWeek() }
@@ -89,12 +91,65 @@ class EditHabitViewModelTest {
         }
 
         viewModel.onNameChanged("晨读")
+        viewModel.selectIcon(IconKey.WATER)
         viewModel.saveHabit()
         advanceUntilIdle()
 
         assertEquals("晨读", viewModel.uiState.value.name)
+        assertEquals(IconKey.WATER, viewModel.uiState.value.iconKey)
         assertFalse(viewModel.uiState.value.isSaving)
         assertEquals(EditHabitUiEvent.SaveFailed("保存失败，请稍后重试"), event.await())
+    }
+
+    @Test
+    fun loadedIcon_isStableAcrossNameChanges_andExplicitRecommendationIsOneShot() = runTest {
+        val habitDao = EditableHabitDao(habit(id = 7, name = "阅读", iconKey = "reading"))
+        val viewModel = EditHabitViewModel(
+            HabitRepository(habitDao, EmptyRecordDao()), 7, mainDispatcherRule.dispatcher
+        )
+        advanceUntilIdle()
+        assertEquals(IconKey.READING, viewModel.uiState.value.iconKey)
+        viewModel.onNameChanged("晨跑")
+        assertEquals(IconKey.READING, viewModel.uiState.value.iconKey)
+        viewModel.recommendIconForCurrentName()
+        assertEquals(IconKey.EXERCISE, viewModel.uiState.value.iconKey)
+        viewModel.onNameChanged("健康餐")
+        assertEquals(IconKey.EXERCISE, viewModel.uiState.value.iconKey)
+        viewModel.selectIcon(IconKey.WATER)
+        viewModel.saveHabit()
+        advanceUntilIdle()
+        assertEquals("water", habitDao.updatedHabit?.iconKey)
+    }
+
+    @Test
+    fun unknownIcon_isPreservedUntilExplicitReplacement() = runTest {
+        val habitDao = EditableHabitDao(habit(id = 7, name = "阅读", iconKey = "cycling"))
+        val viewModel = EditHabitViewModel(
+            HabitRepository(habitDao, EmptyRecordDao()), 7, mainDispatcherRule.dispatcher
+        )
+        advanceUntilIdle()
+        assertEquals(IconKey("cycling"), viewModel.uiState.value.iconKey)
+        viewModel.onNameChanged("晨跑")
+        assertEquals(IconKey("cycling"), viewModel.uiState.value.iconKey)
+        assertEquals(null, habitDao.updatedHabit)
+        viewModel.saveHabit()
+        advanceUntilIdle()
+        assertEquals("cycling", habitDao.updatedHabit?.iconKey)
+    }
+
+    @Test
+    fun unknownIcon_explicitRecommendationReplacesRawKeyOnlyOnSave() = runTest {
+        val habitDao = EditableHabitDao(habit(id = 7, name = "健康餐", iconKey = "cycling"))
+        val viewModel = EditHabitViewModel(
+            HabitRepository(habitDao, EmptyRecordDao()), 7, mainDispatcherRule.dispatcher
+        )
+        advanceUntilIdle()
+        viewModel.recommendIconForCurrentName()
+        assertEquals(IconKey.NUTRITION, viewModel.uiState.value.iconKey)
+        assertEquals(null, habitDao.updatedHabit)
+        viewModel.saveHabit()
+        advanceUntilIdle()
+        assertEquals("nutrition", habitDao.updatedHabit?.iconKey)
     }
 
     private fun habit(

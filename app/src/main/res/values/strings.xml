@@ -20,6 +20,15 @@
     <string name="habit_preview_title">习惯预览</string>
     <string name="habit_preview_badge">效果预览</string>
     <string name="habit_preview_empty_name">待命名习惯</string>
+    <string name="habit_preview_icon_description">预览图标：%1$s</string>
+    <string name="habit_icon_auto_status">图标 · 自动推荐：%1$s</string>
+    <string name="habit_icon_manual_status">图标 · 已选择：%1$s</string>
+    <string name="habit_icon_saved_status">图标 · 当前：%1$s</string>
+    <string name="habit_icon_unknown_status">图标 · 原图标暂不可用，预览显示通用</string>
+    <string name="habit_icon_restore_auto">恢复自动推荐</string>
+    <string name="habit_icon_recommend_now">按名称推荐</string>
+    <string name="habit_icon_picker_title">选择习惯图标</string>
+    <string name="habit_icon_selected">已选择</string>
     <string name="habit_icon_general">通用</string>
     <string name="habit_icon_reading">阅读</string>
     <string name="habit_icon_exercise">运动</string>

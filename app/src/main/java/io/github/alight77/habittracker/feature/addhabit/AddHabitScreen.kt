@@ -12,7 +12,9 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -22,7 +24,9 @@ import androidx.lifecycle.repeatOnLifecycle
 import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.ui.component.HabitFormContent
 import io.github.alight77.habittracker.ui.component.HabitFormHero
+import io.github.alight77.habittracker.ui.component.HabitIconPicker
 import io.github.alight77.habittracker.ui.component.HabitFormPageScaffold
+import io.github.alight77.habittracker.ui.icon.HabitIconCatalog
 
 @Composable
 fun AddHabitScreen(
@@ -31,7 +35,25 @@ fun AddHabitScreen(
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
     val snackbarHostState = remember { SnackbarHostState() }
+    val showIconPicker = remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val iconDefinition = HabitIconCatalog.resolveForDisplay(uiState.effectiveIconKey).definition
+    val iconStatus = stringResource(
+        if (uiState.manualIconKey == null) R.string.habit_icon_auto_status else R.string.habit_icon_manual_status,
+        stringResource(iconDefinition.labelRes)
+    )
+
+    if (showIconPicker.value && !uiState.isSaving) {
+        HabitIconPicker(
+            selectedKey = uiState.effectiveIconKey,
+            onSelect = { key ->
+                viewModel.selectIcon(key)
+                showIconPicker.value = false
+            },
+            onDismiss = { showIconPicker.value = false }
+        )
+    }
 
     LaunchedEffect(viewModel, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -83,7 +105,15 @@ fun AddHabitScreen(
                 onIncreaseTarget = viewModel::increaseTargetPerWeek,
                 onSave = viewModel::saveHabit,
                 saveLabel = stringResource(R.string.save_habit),
-                showNameSuggestions = true
+                showNameSuggestions = true,
+                iconKey = uiState.effectiveIconKey,
+                iconStatus = iconStatus,
+                onChooseIcon = {
+                    keyboardController?.hide()
+                    showIconPicker.value = true
+                },
+                iconActionLabel = if (uiState.manualIconKey != null) stringResource(R.string.habit_icon_restore_auto) else null,
+                onIconAction = viewModel::restoreAutomaticIcon
             )
         }
     }

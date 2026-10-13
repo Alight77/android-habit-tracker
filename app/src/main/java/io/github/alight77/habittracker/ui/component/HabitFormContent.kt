@@ -21,9 +21,11 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.alight77.habittracker.R
+import io.github.alight77.habittracker.domain.icon.IconKey
 import io.github.alight77.habittracker.domain.model.WeeklyTargetConstraints.MAX_TARGET_PER_WEEK
 import io.github.alight77.habittracker.domain.model.WeeklyTargetConstraints.MIN_TARGET_PER_WEEK
 import io.github.alight77.habittracker.ui.theme.HabitTrackerTheme
@@ -52,7 +55,12 @@ fun HabitFormContent(
     onIncreaseTarget: () -> Unit,
     onSave: () -> Unit,
     saveLabel: String,
-    showNameSuggestions: Boolean = false
+    showNameSuggestions: Boolean = false,
+    iconKey: IconKey = IconKey.GENERAL,
+    iconStatus: String = "",
+    onChooseIcon: () -> Unit = {},
+    iconActionLabel: String? = null,
+    onIconAction: () -> Unit = {}
 ) {
     val colors = MaterialTheme.colorScheme
     val decreaseDescription = stringResource(R.string.decrease_weekly_goal)
@@ -73,7 +81,26 @@ fun HabitFormContent(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        HabitPreviewCard(name = name, targetPerWeek = targetPerWeek)
+        HabitPreviewCard(name = name, targetPerWeek = targetPerWeek, iconKey = iconKey)
+
+        if (iconStatus.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                OutlinedButton(
+                    onClick = onChooseIcon,
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("habit_choose_icon")
+                ) {
+                    Text(iconStatus, textAlign = TextAlign.Center)
+                }
+                iconActionLabel?.let { label ->
+                    TextButton(
+                        onClick = onIconAction,
+                        enabled = !isSaving,
+                        modifier = Modifier.align(Alignment.End).testTag("habit_icon_action")
+                    ) { Text(label) }
+                }
+            }
+        }
 
         Column(
             modifier = Modifier.fillMaxWidth(),

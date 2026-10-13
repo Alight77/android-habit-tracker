@@ -5,6 +5,7 @@ import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.local.RecordDao
 import io.github.alight77.habittracker.data.local.RecordEntity
 import io.github.alight77.habittracker.data.repository.HabitRepository
+import io.github.alight77.habittracker.domain.icon.IconKey
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -54,7 +55,7 @@ class AddHabitViewModelTest {
 
         assertEquals("阅读", habitDao.insertedHabits.single().name)
         assertEquals(5, habitDao.insertedHabits.single().targetPerWeek)
-        assertEquals("general", habitDao.insertedHabits.single().iconKey)
+        assertEquals("reading", habitDao.insertedHabits.single().iconKey)
         val navigationRequestId = viewModel.uiState.value.navigateBackRequestId
         assertTrue(navigationRequestId != null)
 
@@ -73,10 +74,67 @@ class AddHabitViewModelTest {
 
         viewModel.onNameChanged("阅读")
         viewModel.saveHabit()
+        viewModel.selectIcon(IconKey.WATER)
+        viewModel.onNameChanged("晨跑")
         viewModel.saveHabit()
         advanceUntilIdle()
 
         assertEquals(1, habitDao.insertedHabits.size)
+        assertEquals("reading", habitDao.insertedHabits.single().iconKey)
+    }
+
+    @Test
+    fun automaticRecommendation_andManualOverride_areDistinct() = runTest {
+        val viewModel = AddHabitViewModel(
+            HabitRepository(RecordingHabitDao(), EmptyRecordDao()),
+            StandardTestDispatcher(testScheduler)
+        )
+
+        assertEquals(IconKey.GENERAL, viewModel.uiState.value.effectiveIconKey)
+        assertEquals(null, viewModel.uiState.value.manualIconKey)
+        viewModel.onNameChanged("阅读")
+        assertEquals(IconKey.READING, viewModel.uiState.value.effectiveIconKey)
+        viewModel.onNameChanged("晨跑")
+        assertEquals(IconKey.EXERCISE, viewModel.uiState.value.effectiveIconKey)
+        viewModel.selectIcon(IconKey.WATER)
+        viewModel.onNameChanged("健康餐")
+        assertEquals(IconKey.WATER, viewModel.uiState.value.effectiveIconKey)
+        viewModel.selectIcon(IconKey.GENERAL)
+        viewModel.onNameChanged("阅读")
+        assertEquals(IconKey.GENERAL, viewModel.uiState.value.manualIconKey)
+        assertEquals(IconKey.GENERAL, viewModel.uiState.value.effectiveIconKey)
+        viewModel.restoreAutomaticIcon()
+        assertEquals(IconKey.READING, viewModel.uiState.value.effectiveIconKey)
+        viewModel.onNameChanged("多喝水")
+        assertEquals(IconKey.WATER, viewModel.uiState.value.effectiveIconKey)
+    }
+
+    @Test
+    fun saveHabit_usesManualIconSnapshot() = runTest {
+        val habitDao = RecordingHabitDao()
+        val viewModel = AddHabitViewModel(
+            HabitRepository(habitDao, EmptyRecordDao()),
+            StandardTestDispatcher(testScheduler)
+        )
+        viewModel.onNameChanged("阅读")
+        viewModel.selectIcon(IconKey.WATER)
+        viewModel.saveHabit()
+        advanceUntilIdle()
+        assertEquals("water", habitDao.insertedHabits.single().iconKey)
+    }
+
+    @Test
+    fun saveHabit_manualGeneralDoesNotSwitchBackToNameRecommendation() = runTest {
+        val habitDao = RecordingHabitDao()
+        val viewModel = AddHabitViewModel(
+            HabitRepository(habitDao, EmptyRecordDao()),
+            StandardTestDispatcher(testScheduler)
+        )
+        viewModel.onNameChanged("阅读")
+        viewModel.selectIcon(IconKey.GENERAL)
+        viewModel.saveHabit()
+        advanceUntilIdle()
+        assertEquals("general", habitDao.insertedHabits.single().iconKey)
     }
 
     @Test
@@ -107,10 +165,12 @@ class AddHabitViewModelTest {
         }
 
         viewModel.onNameChanged("阅读")
+        viewModel.selectIcon(IconKey.WATER)
         viewModel.saveHabit()
         advanceUntilIdle()
 
         assertEquals("阅读", viewModel.uiState.value.name)
+        assertEquals(IconKey.WATER, viewModel.uiState.value.manualIconKey)
         assertFalse(viewModel.uiState.value.isSaving)
         assertEquals(
             listOf(AddHabitUiEvent.SaveFailed("保存失败，请稍后重试")),

@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -26,11 +27,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.alight77.habittracker.R
+import io.github.alight77.habittracker.domain.icon.IconKey
+import io.github.alight77.habittracker.ui.icon.HabitIconCatalog
 
-/** 仅展示表单当前输入；后续接入正式图标 ID 时，在此处替换图标数据与映射。 */
+/** 仅展示当前表单草稿；未知 Key 的通用素材回退只影响展示，不改变保存值。 */
 @Composable
-fun HabitPreviewCard(name: String, targetPerWeek: Int) {
+fun HabitPreviewCard(name: String, targetPerWeek: Int, iconKey: IconKey = IconKey.GENERAL) {
     val colors = MaterialTheme.colorScheme
+    val icon = HabitIconCatalog.resolveForDisplay(iconKey).definition
+    val palette = icon.palette(colors.background.luminance() <= 0.5f)
     val visibleName = name.trim().ifEmpty { stringResource(R.string.habit_preview_empty_name) }
 
     Column(
@@ -62,15 +67,14 @@ fun HabitPreviewCard(name: String, targetPerWeek: Int) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(56.dp).background(colors.primaryContainer, CircleShape),
+                modifier = Modifier.size(56.dp).background(palette.iconContainer, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                // 预览植物是统一的临时装饰，不表示习惯已有可持久化图标。
                 Image(
-                    painter = painterResource(R.drawable.habit_form_seedling),
-                    contentDescription = null,
+                    painter = painterResource(icon.drawableRes),
+                    contentDescription = stringResource(R.string.habit_preview_icon_description, stringResource(icon.labelRes)),
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(52.dp)
+                    modifier = Modifier.size(52.dp).testTag("habit_preview_icon_${icon.key.value}")
                 )
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasSetTextAction
@@ -96,6 +97,41 @@ class AddHabitScreenTest {
         composeRule.onNodeWithTag("habit_name_input").assertTextContains("阅读")
         composeRule.onNodeWithTag("habit_preview_name").assertTextEquals("阅读")
         composeRule.onNodeWithTag("habit_preview_target").assertTextEquals("每周目标 7 次")
+        composeRule.onNodeWithTag("habit_preview_icon_reading").assertExists()
+    }
+
+    @Test
+    fun automaticManualAndRestore_persistFinalIconInRoom() {
+        val backClickCount = AtomicInteger(0)
+        val stableViewModel = viewModel()
+        composeRule.setContent {
+            AddHabitScreen(stableViewModel, onBackClick = { backClickCount.incrementAndGet() })
+        }
+        composeRule.onNodeWithText("图标 · 自动推荐：通用").assertExists()
+        composeRule.onNodeWithTag("habit_name_suggestion_0").performScrollTo().performClick()
+        composeRule.onNodeWithTag("habit_preview_icon_reading").assertExists()
+        composeRule.onNodeWithTag("habit_choose_icon").performScrollTo().performClick()
+        composeRule.onNodeWithTag("habit_icon_option_reading").assertIsSelected()
+        composeRule.onNodeWithTag("habit_icon_option_water").performScrollTo().performClick()
+        composeRule.onNodeWithTag("habit_preview_icon_water").assertExists()
+        stableViewModel.onNameChanged("晨跑")
+        composeRule.onNodeWithTag("habit_preview_icon_water").assertExists()
+        composeRule.onNodeWithTag("habit_icon_action").performScrollTo().performClick()
+        composeRule.onNodeWithTag("habit_preview_icon_exercise").assertExists()
+        composeRule.onNodeWithTag("habit_choose_icon").performScrollTo().performClick()
+        composeRule.onNodeWithTag("habit_icon_option_water").performScrollTo().performClick()
+        composeRule.onNodeWithText("保存习惯").performScrollTo().performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
+        assertEquals("water", runBlocking { database.habitDao().getAllHabits().first().single().iconKey })
+    }
+
+    @Test
+    fun pickerDismiss_keepsAutomaticModeAndDoesNotWrite() {
+        composeRule.setContent { AddHabitScreen(viewModel(), onBackClick = {}) }
+        composeRule.onNodeWithTag("habit_choose_icon").performScrollTo().performClick()
+        composeRule.onNodeWithText("取消").performClick()
+        composeRule.onNodeWithText("图标 · 自动推荐：通用").assertExists()
+        assertTrue(runBlocking { database.habitDao().getAllHabits().first().isEmpty() })
     }
 
     @Test

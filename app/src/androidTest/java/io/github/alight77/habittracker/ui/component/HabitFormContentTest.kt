@@ -29,7 +29,9 @@ class HabitFormContentTest {
                     onIncreaseTarget = {},
                     onSave = {},
                     saveLabel = "保存修改",
-                    showNameSuggestions = true
+                    showNameSuggestions = true,
+                    iconStatus = "图标 · 当前：阅读",
+                    iconActionLabel = "按名称推荐"
                 )
             }
         }
@@ -38,6 +40,8 @@ class HabitFormContentTest {
         composeRule.onNodeWithContentDescription("减少每周目标次数").assertIsNotEnabled()
         composeRule.onNodeWithContentDescription("增加每周目标次数").assertIsNotEnabled()
         composeRule.onNodeWithTag("habit_name_suggestion_0").assertIsNotEnabled()
+        composeRule.onNodeWithTag("habit_choose_icon").assertIsNotEnabled()
+        composeRule.onNodeWithTag("habit_icon_action").assertIsNotEnabled()
         composeRule.onNodeWithText("保存中…").assertIsNotEnabled()
     }
 
