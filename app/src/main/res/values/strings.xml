@@ -20,6 +20,16 @@
     <string name="habit_preview_title">习惯预览</string>
     <string name="habit_preview_badge">效果预览</string>
     <string name="habit_preview_empty_name">待命名习惯</string>
+    <string name="habit_icon_general">通用</string>
+    <string name="habit_icon_reading">阅读</string>
+    <string name="habit_icon_exercise">运动</string>
+    <string name="habit_icon_water">饮水</string>
+    <string name="habit_icon_sleep">睡眠</string>
+    <string name="habit_icon_study">学习</string>
+    <string name="habit_icon_mindfulness">正念</string>
+    <string name="habit_icon_health">健康</string>
+    <string name="habit_icon_nutrition">饮食</string>
+    <string name="habit_icon_clean">清洁</string>
     <string name="weekly_goal">每周目标次数</string>
     <string name="weekly_goal_value">%1$d 次 / 周</string>
     <string name="weekly_plan_flexible">每周计划 %1$d 次，可以灵活安排时间。</string>
