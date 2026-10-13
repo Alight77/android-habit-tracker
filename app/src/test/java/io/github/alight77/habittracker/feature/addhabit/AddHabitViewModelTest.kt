@@ -54,6 +54,7 @@ class AddHabitViewModelTest {
 
         assertEquals("阅读", habitDao.insertedHabits.single().name)
         assertEquals(5, habitDao.insertedHabits.single().targetPerWeek)
+        assertEquals("general", habitDao.insertedHabits.single().iconKey)
         val navigationRequestId = viewModel.uiState.value.navigateBackRequestId
         assertTrue(navigationRequestId != null)
 

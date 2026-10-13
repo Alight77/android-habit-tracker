@@ -19,7 +19,8 @@ class AppContainer(context: Context) {
     )
         .addMigrations(
             HabitDatabaseMigrations.MIGRATION_2_3,
-            HabitDatabaseMigrations.MIGRATION_3_4
+            HabitDatabaseMigrations.MIGRATION_3_4,
+            HabitDatabaseMigrations.MIGRATION_4_5
         )
         .build()
 

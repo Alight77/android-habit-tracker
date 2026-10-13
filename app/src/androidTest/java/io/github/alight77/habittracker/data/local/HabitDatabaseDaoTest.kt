@@ -43,6 +43,22 @@ class HabitDatabaseDaoTest {
     }
 
     @Test
+    fun iconKey_roundTripsOnFreshDatabaseWithoutNormalizingUnknownValues() = runBlocking {
+        database.habitDao().insertHabit(habit(name = "旧习惯", createdAt = 1))
+        database.habitDao().insertHabit(habit(name = "阅读", createdAt = 2).copy(iconKey = "reading"))
+        database.habitDao().insertHabit(habit(name = "骑行", createdAt = 3).copy(iconKey = "cycling"))
+
+        val habits = database.habitDao().getAllHabits().first().associateBy { it.name }
+        assertEquals("general", habits.getValue("旧习惯").iconKey)
+        assertEquals("reading", habits.getValue("阅读").iconKey)
+        assertEquals("cycling", habits.getValue("骑行").iconKey)
+
+        val unknownKeyHabit = habits.getValue("骑行")
+        database.habitDao().updateHabit(unknownKeyHabit.copy(name = "周末骑行"))
+        assertEquals("cycling", database.habitDao().getHabitById(unknownKeyHabit.id)?.iconKey)
+    }
+
+    @Test
     fun setRecordChecked_updatesExistingRecordInsteadOfCreatingDuplicate() = runBlocking {
         database.habitDao().insertHabit(habit(name = "阅读", createdAt = 1))
         val habitId = database.habitDao().getAllHabits().first().single().id

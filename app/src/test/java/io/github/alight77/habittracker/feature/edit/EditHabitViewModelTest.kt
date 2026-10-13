@@ -35,7 +35,8 @@ class EditHabitViewModelTest {
             name = "阅读",
             description = "保留的描述",
             targetPerWeek = 3,
-            createdAt = 100L
+            createdAt = 100L,
+            iconKey = "cycling"
         )
         val habitDao = EditableHabitDao(originalHabit)
         val viewModel = EditHabitViewModel(
@@ -101,14 +102,16 @@ class EditHabitViewModelTest {
         name: String,
         description: String = "",
         targetPerWeek: Int = 3,
-        createdAt: Long = 0L
+        createdAt: Long = 0L,
+        iconKey: String = "general"
     ): HabitEntity {
         return HabitEntity(
             id = id,
             name = name,
             description = description,
             targetPerWeek = targetPerWeek,
-            createdAt = createdAt
+            createdAt = createdAt,
+            iconKey = iconKey
         )
     }
 

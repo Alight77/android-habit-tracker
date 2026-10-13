@@ -50,4 +50,11 @@ object HabitDatabaseMigrations {
             )
         }
     }
+
+    val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // 仅追加带默认值的列，旧习惯、主键和打卡记录保持原样。
+            db.execSQL("ALTER TABLE habits ADD COLUMN iconKey TEXT NOT NULL DEFAULT 'general'")
+        }
+    }
 }

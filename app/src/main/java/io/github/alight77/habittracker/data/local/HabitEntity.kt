@@ -1,5 +1,6 @@
 package io.github.alight77.habittracker.data.local
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -14,6 +15,10 @@ data class HabitEntity(
 
     val targetPerWeek: Int,
 
-    val createdAt: Long
+    val createdAt: Long,
+
+    // 保留数据库中的原始 Key；未知值只在展示层回退，不在读取时改写。
+    @ColumnInfo(defaultValue = "'general'")
+    val iconKey: String = "general"
 
 )
