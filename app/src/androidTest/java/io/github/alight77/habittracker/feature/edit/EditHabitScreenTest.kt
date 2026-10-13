@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
@@ -92,14 +94,19 @@ class EditHabitScreenTest {
         }
 
         composeRule.onNodeWithContentDescription("返回").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("减少每周目标次数").assertIsDisplayed()
+        composeRule.onNodeWithText("持续让好习惯生长").assertIsDisplayed()
+        composeRule.onNodeWithText("试试这些名称").assertDoesNotExist()
+        composeRule.onNodeWithTag("habit_preview_name").assertTextEquals("阅读")
+        composeRule.onNodeWithContentDescription("减少每周目标次数").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithContentDescription("增加每周目标次数").assertIsDisplayed()
         composeRule.onNodeWithText("3 次 / 周").assertIsDisplayed()
         composeRule.onNode(hasSetTextAction()).performTextClearance()
         composeRule.onNode(hasSetTextAction()).performTextInput("晨读")
+        composeRule.onNodeWithTag("habit_preview_name").assertTextEquals("晨读")
         repeat(2) { composeRule.onNodeWithText("＋").performScrollTo().performClick() }
         // 大字号加键盘时目标值可位于视口下方；验证它可滚动到达后再保存。
         composeRule.onNodeWithText("5 次 / 周").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag("habit_preview_target").assertTextEquals("每周目标 5 次")
         composeRule.onNodeWithText("保存修改").performScrollTo().performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
 

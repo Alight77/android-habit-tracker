@@ -63,6 +63,22 @@ class AddHabitViewModelTest {
     }
 
     @Test
+    fun saveHabit_whileSaving_ignoresRepeatedRequest() = runTest {
+        val habitDao = RecordingHabitDao()
+        val viewModel = AddHabitViewModel(
+            repository = HabitRepository(habitDao, EmptyRecordDao()),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
+
+        viewModel.onNameChanged("阅读")
+        viewModel.saveHabit()
+        viewModel.saveHabit()
+        advanceUntilIdle()
+
+        assertEquals(1, habitDao.insertedHabits.size)
+    }
+
+    @Test
     fun targetPerWeek_isBoundedBetweenOneAndSeven() = runTest {
         val viewModel = AddHabitViewModel(
             repository = HabitRepository(RecordingHabitDao(), EmptyRecordDao()),

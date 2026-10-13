@@ -3,6 +3,7 @@ package io.github.alight77.habittracker.ui.component
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,18 +13,22 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -46,85 +51,136 @@ fun HabitFormContent(
     onDecreaseTarget: () -> Unit,
     onIncreaseTarget: () -> Unit,
     onSave: () -> Unit,
-    saveLabel: String
+    saveLabel: String,
+    showNameSuggestions: Boolean = false
 ) {
     val colors = MaterialTheme.colorScheme
-    val decreaseTargetContentDescription = stringResource(R.string.decrease_weekly_goal)
-    val increaseTargetContentDescription = stringResource(R.string.increase_weekly_goal)
+    val decreaseDescription = stringResource(R.string.decrease_weekly_goal)
+    val increaseDescription = stringResource(R.string.increase_weekly_goal)
+    val goalGuidance = if (targetPerWeek == MAX_TARGET_PER_WEEK) {
+        stringResource(R.string.weekly_plan_every_day)
+    } else {
+        stringResource(R.string.weekly_plan_flexible, targetPerWeek)
+    }
+    val canDecrease = !isSaving && targetPerWeek > MIN_TARGET_PER_WEEK
+    val canIncrease = !isSaving && targetPerWeek < MAX_TARGET_PER_WEEK
+    val stepperColors = IconButtonDefaults.outlinedIconButtonColors(
+        contentColor = colors.onSurface,
+        disabledContentColor = colors.onSurfaceVariant.copy(alpha = 0.45f)
+    )
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        Surface(
+        HabitPreviewCard(name = name, targetPerWeek = targetPerWeek)
+
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            color = colors.surface,
-            border = BorderStroke(1.dp, colors.outlineVariant),
-            shadowElevation = 1.dp
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = onNameChanged,
-                    modifier = Modifier.fillMaxWidth().testTag("habit_name_input"),
-                    label = { Text(stringResource(R.string.habit_name)) },
-                    textStyle = MaterialTheme.typography.bodyLarge,
-                    shape = RoundedCornerShape(14.dp),
-                    // 写入使用点击保存时的快照；处理中锁定字段，避免随后输入被误认为已保存。
-                    enabled = !isSaving,
-                    isError = nameError != null,
-                    supportingText = nameError?.let { message ->
-                        { Text(message) }
-                    }
+            OutlinedTextField(
+                value = name,
+                onValueChange = onNameChanged,
+                modifier = Modifier.fillMaxWidth().testTag("habit_name_input"),
+                label = { Text(stringResource(R.string.habit_name)) },
+                placeholder = { Text(stringResource(R.string.habit_name_example)) },
+                textStyle = MaterialTheme.typography.bodyLarge,
+                shape = RoundedCornerShape(14.dp),
+                // 写入使用点击保存时的快照；处理中锁定所有表单入口，避免新输入被误认为已保存。
+                enabled = !isSaving,
+                isError = nameError != null,
+                supportingText = nameError?.let { message -> { Text(message) } }
+            )
+
+            if (showNameSuggestions) {
+                Text(
+                    text = stringResource(R.string.habit_name_suggestions_title),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.onSurfaceVariant
                 )
-
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = stringResource(R.string.weekly_goal),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colors.onSurface
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedIconButton(
-                            onClick = onDecreaseTarget,
-                            enabled = !isSaving && targetPerWeek > MIN_TARGET_PER_WEEK,
-                            modifier = Modifier.size(48.dp).semantics {
-                                contentDescription = decreaseTargetContentDescription
-                            }
-                        ) {
-                            Text("−", style = MaterialTheme.typography.titleLarge)
-                        }
-
-                        Text(
-                            text = stringResource(R.string.weekly_goal_value, targetPerWeek),
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colors.onSurface,
-                            textAlign = TextAlign.Center
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    stringArrayResource(R.array.habit_name_suggestions).forEachIndexed { index, suggestion ->
+                        FilterChip(
+                            selected = name.trim() == suggestion,
+                            onClick = { onNameChanged(suggestion) },
+                            label = { Text(suggestion) },
+                            enabled = !isSaving,
+                            modifier = Modifier.testTag("habit_name_suggestion_$index")
                         )
-
-                        OutlinedIconButton(
-                            onClick = onIncreaseTarget,
-                            enabled = !isSaving && targetPerWeek < MAX_TARGET_PER_WEEK,
-                            modifier = Modifier.size(48.dp).semantics {
-                                contentDescription = increaseTargetContentDescription
-                            }
-                        ) {
-                            Text("＋", style = MaterialTheme.typography.titleLarge)
-                        }
                     }
                 }
             }
+        }
+
+        HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.weekly_goal),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.onSurface
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedIconButton(
+                    onClick = onDecreaseTarget,
+                    enabled = canDecrease,
+                    colors = stepperColors,
+                    border = BorderStroke(
+                        1.dp,
+                        colors.onSurfaceVariant.copy(alpha = if (canDecrease) 1f else 0.35f)
+                    ),
+                    modifier = Modifier.size(48.dp).semantics {
+                        contentDescription = decreaseDescription
+                    }
+                ) {
+                    Text("−", style = MaterialTheme.typography.titleLarge)
+                }
+
+                Text(
+                    text = stringResource(R.string.weekly_goal_value, targetPerWeek),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.onSurface,
+                    textAlign = TextAlign.Center
+                )
+
+                OutlinedIconButton(
+                    onClick = onIncreaseTarget,
+                    enabled = canIncrease,
+                    colors = stepperColors,
+                    border = BorderStroke(
+                        1.dp,
+                        colors.onSurfaceVariant.copy(alpha = if (canIncrease) 1f else 0.35f)
+                    ),
+                    modifier = Modifier.size(48.dp).semantics {
+                        contentDescription = increaseDescription
+                    }
+                ) {
+                    Text("＋", style = MaterialTheme.typography.titleLarge)
+                }
+            }
+            Text(
+                text = goalGuidance,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.primaryContainer.copy(alpha = 0.78f), RoundedCornerShape(12.dp))
+                    .padding(12.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onPrimaryContainer
+            )
         }
 
         Button(
@@ -155,23 +211,29 @@ fun HabitFormContent(
 @Preview(showBackground = true, name = "Habit form - Add 320dp 2x", widthDp = 320, fontScale = 2f)
 @Composable
 private fun HabitFormAddPreview() {
-    HabitFormPreview(name = "", targetPerWeek = 7, nameError = null, isSaving = false)
+    HabitFormPreview(name = "", targetPerWeek = 7, nameError = null, isSaving = false, showSuggestions = true)
 }
 
 @Preview(showBackground = true, name = "Habit form - Error")
 @Composable
 private fun HabitFormErrorPreview() {
-    HabitFormPreview(name = "", targetPerWeek = 3, nameError = "请输入习惯名称", isSaving = false)
+    HabitFormPreview(name = "", targetPerWeek = 3, nameError = "请输入习惯名称", isSaving = false, showSuggestions = true)
 }
 
 @Preview(showBackground = true, name = "Habit form - Saving")
 @Composable
 private fun HabitFormSavingPreview() {
-    HabitFormPreview(name = "每天阅读", targetPerWeek = 5, nameError = null, isSaving = true)
+    HabitFormPreview(name = "阅读 30 分钟", targetPerWeek = 5, nameError = null, isSaving = true, showSuggestions = false)
 }
 
 @Composable
-private fun HabitFormPreview(name: String, targetPerWeek: Int, nameError: String?, isSaving: Boolean) {
+private fun HabitFormPreview(
+    name: String,
+    targetPerWeek: Int,
+    nameError: String?,
+    isSaving: Boolean,
+    showSuggestions: Boolean
+) {
     HabitTrackerTheme {
         Column(Modifier.background(MaterialTheme.colorScheme.background).padding(16.dp)) {
             HabitFormContent(
@@ -183,7 +245,8 @@ private fun HabitFormPreview(name: String, targetPerWeek: Int, nameError: String
                 onDecreaseTarget = {},
                 onIncreaseTarget = {},
                 onSave = {},
-                saveLabel = stringResource(R.string.save)
+                saveLabel = stringResource(R.string.save_habit),
+                showNameSuggestions = showSuggestions
             )
         }
     }

@@ -10,8 +10,12 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -28,6 +32,8 @@ import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.alight77.habittracker.data.local.HabitDatabase
+import io.github.alight77.habittracker.data.local.HabitDao
+import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.repository.HabitRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -65,6 +71,34 @@ class AddHabitScreenTest {
     }
 
     @Test
+    fun addPage_showsCreationGuidance() {
+        composeRule.setContent {
+            AddHabitScreen(viewModel = viewModel(), onBackClick = {})
+        }
+
+        composeRule.onNodeWithText("种下一个新习惯").assertIsDisplayed()
+        composeRule.onNodeWithText("从今天开始，遇见更好的自己。").assertIsDisplayed()
+        composeRule.onNodeWithText("习惯预览").assertIsDisplayed()
+        composeRule.onNodeWithText("试试这些名称").assertExists()
+        composeRule.onNodeWithText("每周计划 7 次，目标是每天一次。").assertExists()
+        composeRule.onNodeWithText("保存习惯").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun nameSuggestion_updatesInputAndLivePreview() {
+        val stableViewModel = viewModel()
+        composeRule.setContent {
+            AddHabitScreen(viewModel = stableViewModel, onBackClick = {})
+        }
+
+        composeRule.onNodeWithTag("habit_preview_name").assertTextEquals("待命名习惯")
+        composeRule.onNodeWithTag("habit_name_suggestion_0").performScrollTo().performClick()
+        composeRule.onNodeWithTag("habit_name_input").assertTextContains("阅读")
+        composeRule.onNodeWithTag("habit_preview_name").assertTextEquals("阅读")
+        composeRule.onNodeWithTag("habit_preview_target").assertTextEquals("每周目标 7 次")
+    }
+
+    @Test
     fun saveHabit_withBlankName_showsValidationError() {
         composeRule.setContent {
             AddHabitScreen(
@@ -73,7 +107,7 @@ class AddHabitScreenTest {
             )
         }
 
-        composeRule.onNodeWithText("保存").performClick()
+        composeRule.onNodeWithText("保存习惯").performScrollTo().performClick()
 
         composeRule.onNodeWithText("请输入习惯名称").assertIsDisplayed()
     }
@@ -90,7 +124,7 @@ class AddHabitScreenTest {
         }
 
         composeRule.onNode(hasSetTextAction()).performTextInput("阅读")
-        composeRule.onNodeWithText("保存").performScrollTo().performClick()
+        composeRule.onNodeWithText("保存习惯").performScrollTo().performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
 
         assertEquals(1, backClickCount.get())
@@ -113,11 +147,17 @@ class AddHabitScreenTest {
         }
 
         composeRule.onNodeWithText("＋").assertIsNotEnabled()
-        repeat(2) { composeRule.onNodeWithText("−").performClick() }
-        composeRule.onNodeWithText("5 次 / 周").assertIsDisplayed()
+        repeat(2) {
+            composeRule.onNodeWithContentDescription("减少每周目标次数")
+                .performScrollTo()
+                .performClick()
+        }
+        composeRule.onNodeWithText("5 次 / 周").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("每周计划 5 次，可以灵活安排时间。").assertExists()
+        composeRule.onNodeWithTag("habit_preview_target").assertTextEquals("每周目标 5 次")
 
         composeRule.onNode(hasSetTextAction()).performTextInput("阅读")
-        composeRule.onNodeWithText("保存").performScrollTo().performClick()
+        composeRule.onNodeWithText("保存习惯").performScrollTo().performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
 
         assertEquals(
@@ -139,6 +179,44 @@ class AddHabitScreenTest {
         composeRule.onNodeWithContentDescription("返回").performClick()
 
         assertEquals(1, backClickCount.get())
+        assertTrue(runBlocking { database.habitDao().getAllHabits().first().isEmpty() })
+    }
+
+    @Test
+    fun saveHabit_whenWriteFails_showsFeedbackAndKeepsInput() {
+        val imeBottomPx = AtomicInteger(0)
+        val keyboardController = AtomicReference<SoftwareKeyboardController>()
+        val failingHabitDao = object : HabitDao by database.habitDao() {
+            override suspend fun insertHabit(habit: HabitEntity) {
+                error("database unavailable")
+            }
+        }
+        val stableViewModel = AddHabitViewModel(
+            HabitRepository(failingHabitDao, database.recordDao())
+        )
+        composeRule.setContent {
+            val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+            val controller = LocalSoftwareKeyboardController.current
+            SideEffect {
+                imeBottomPx.set(imeBottom)
+                keyboardController.set(controller)
+            }
+            AddHabitScreen(viewModel = stableViewModel, onBackClick = {})
+        }
+
+        composeRule.onNode(hasSetTextAction()).performTextInput("阅读")
+        composeRule.onNodeWithText("保存习惯").performScrollTo().performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            composeRule.onAllNodesWithText("保存失败，请稍后重试")
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+
+        composeRule.onNodeWithText("保存失败，请稍后重试").assertIsDisplayed()
+        composeRule.onNode(hasSetTextAction()).assertTextContains("阅读")
+        assertTrue(runBlocking { database.habitDao().getAllHabits().first().isEmpty() })
+        // 失败态测试结束前收起键盘，避免输入法状态遗留到下一个 Activity 用例。
+        composeRule.runOnUiThread { keyboardController.get().hide() }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { imeBottomPx.get() == 0 }
     }
 
     @Test
@@ -156,10 +234,10 @@ class AddHabitScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("保存").assertIsNotDisplayed()
+        composeRule.onNodeWithText("保存习惯").assertIsNotDisplayed()
         // 短视口与键盘遮挡分别验证，避免让人工容器承受大于自身高度的系统 IME Insets。
-        composeRule.onNodeWithText("保存").performScrollTo()
-        composeRule.onNodeWithText("保存").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("保存习惯").performScrollTo()
+        composeRule.onNodeWithText("保存习惯").assertIsDisplayed().performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
 
         assertEquals(longName, runBlocking { database.habitDao().getAllHabits().first().single().name })
@@ -189,9 +267,9 @@ class AddHabitScreenTest {
         composeRule.onNode(hasSetTextAction()).performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) { imeBottomPx.get() > 0 }
         composeRule.onNode(hasSetTextAction()).performTextInput(longName)
-        composeRule.onNodeWithText("保存").performScrollTo()
+        composeRule.onNodeWithText("保存习惯").performScrollTo()
 
-        val saveBounds = composeRule.onNodeWithText("保存").getUnclippedBoundsInRoot()
+        val saveBounds = composeRule.onNodeWithText("保存习惯").getUnclippedBoundsInRoot()
         val density = composeRule.density.density
         val saveBottomPx = saveBounds.bottom.value * density
         val keyboardTopPx = composeRule.activity.window.decorView.height - imeBottomPx.get()
@@ -208,9 +286,9 @@ class AddHabitScreenTest {
             // 极短横屏无法同时容纳顶部栏和按钮；收起键盘后仍须能滚动并完成保存。
             composeRule.runOnUiThread { keyboardController.get().hide() }
             composeRule.waitUntil(timeoutMillis = 5_000L) { imeBottomPx.get() == 0 }
-            composeRule.onNodeWithText("保存").performScrollTo().assertIsDisplayed()
+            composeRule.onNodeWithText("保存习惯").performScrollTo().assertIsDisplayed()
         }
-        composeRule.onNodeWithText("保存").performClick()
+        composeRule.onNodeWithText("保存习惯").performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
         assertEquals(longName, runBlocking { database.habitDao().getAllHabits().first().single().name })
     }
