@@ -1,6 +1,7 @@
 package io.github.alight77.habittracker.feature.dashboard
 
 import androidx.compose.runtime.Immutable
+import io.github.alight77.habittracker.domain.icon.IconKey
 import java.time.LocalDate
 
 sealed interface  DashboardUiState {
@@ -25,5 +26,6 @@ data class HabitItemUiState(
     val targetPerWeek: Int,
     val isDoneToday: Boolean,
     val streak: Int,
-    val recentDays: List<RecentCheckInDay>
+    val recentDays: List<RecentCheckInDay>,
+    val iconKey: IconKey = IconKey.GENERAL
 )

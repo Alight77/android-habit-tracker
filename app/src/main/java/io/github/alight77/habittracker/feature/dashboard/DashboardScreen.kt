@@ -79,6 +79,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import java.time.LocalDate
 import io.github.alight77.habittracker.R
+import io.github.alight77.habittracker.domain.icon.IconKey
 import io.github.alight77.habittracker.ui.theme.HabitTrackerTheme
 import io.github.alight77.habittracker.ui.theme.WarmPaperMiddle
 import io.github.alight77.habittracker.ui.theme.WarmPaperBottom
@@ -451,6 +452,7 @@ fun DashboardContentSuccessPreview() {
             HabitItemUiState(
                 id = 1,
                 name = "晨练",
+                iconKey = IconKey.EXERCISE,
                 targetPerWeek = 5,
                 isDoneToday = true,
                 streak = 4,
@@ -463,6 +465,7 @@ fun DashboardContentSuccessPreview() {
             HabitItemUiState(
                 id = 2,
                 name = "阅读",
+                iconKey = IconKey.READING,
                 targetPerWeek = 7,
                 isDoneToday = false,
                 streak = 0,

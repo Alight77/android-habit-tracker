@@ -2,6 +2,7 @@ package io.github.alight77.habittracker.feature.dashboard
 
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -35,9 +36,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -49,6 +55,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.alight77.habittracker.R
+import io.github.alight77.habittracker.domain.icon.IconKey
+import io.github.alight77.habittracker.ui.icon.HabitIconCatalog
+import io.github.alight77.habittracker.ui.icon.HabitIconPalette
 import io.github.alight77.habittracker.ui.theme.HabitTrackerTheme
 import java.time.LocalDate
 
@@ -61,6 +70,8 @@ fun HabitCard(
 ) {
     var moreMenuExpanded by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
+    val icon = HabitIconCatalog.resolveForDisplay(habit.iconKey).definition
+    val palette = icon.palette(colors.background.luminance() <= 0.5f)
     val largeText = LocalDensity.current.fontScale >= 1.5f
     val moreActionsContentDescription = stringResource(R.string.habit_more_actions, habit.name)
 
@@ -77,10 +88,36 @@ fun HabitCard(
         )
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                // 类别色只形成局部浅色层；正文仍使用主题的纸张色与文字色。
+                .background(
+                    Brush.verticalGradient(
+                        listOf(palette.cardWash.compositeOver(colors.surface), colors.surface)
+                    )
+                )
+                .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(verticalAlignment = Alignment.Top) {
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(palette.iconContainer, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(icon.drawableRes),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .testTag("habit_card_icon_${icon.key.value}")
+                    )
+                }
                 Text(
                     text = habit.name,
                     modifier = Modifier
@@ -149,10 +186,12 @@ fun HabitCard(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     RecentCheckInStrip(
                         days = habit.recentDays,
+                        palette = palette,
                         modifier = Modifier.fillMaxWidth()
                     )
                     HabitCheckButton(
                         habit = habit,
+                        palette = palette,
                         onClick = onCheckClick,
                         modifier = Modifier.align(Alignment.End)
                     )
@@ -164,9 +203,10 @@ fun HabitCard(
                 ) {
                     RecentCheckInStrip(
                         days = habit.recentDays,
+                        palette = palette,
                         modifier = Modifier.weight(1f)
                     )
-                    HabitCheckButton(habit = habit, onClick = onCheckClick)
+                    HabitCheckButton(habit = habit, palette = palette, onClick = onCheckClick)
                 }
             }
         }
@@ -185,6 +225,7 @@ private fun CardMetaText(text: String) {
 @Composable
 private fun RecentCheckInStrip(
     days: List<RecentCheckInDay>,
+    palette: HabitIconPalette,
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
@@ -214,12 +255,12 @@ private fun RecentCheckInStrip(
         days.forEach { day ->
             val shape = RoundedCornerShape(3.dp)
             val fill = when (day.status) {
-                RecentDayStatus.CHECKED -> colors.primary
+                RecentDayStatus.CHECKED -> palette.checkedDay
                 RecentDayStatus.NOT_CHECKED -> Color.Transparent
                 RecentDayStatus.BEFORE_CREATION -> colors.surfaceVariant.copy(alpha = 0.45f)
             }
             val outline = when (day.status) {
-                RecentDayStatus.CHECKED -> colors.primary
+                RecentDayStatus.CHECKED -> palette.checkedDay
                 RecentDayStatus.NOT_CHECKED -> colors.outline
                 RecentDayStatus.BEFORE_CREATION -> colors.outlineVariant
             }
@@ -249,10 +290,12 @@ private fun RecentCheckInStrip(
 @Composable
 private fun HabitCheckButton(
     habit: HabitItemUiState,
+    palette: HabitIconPalette,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
+    val largeText = LocalDensity.current.fontScale >= 1.5f
     val done = habit.isDoneToday
     val actionText = stringResource(if (done) R.string.completed else R.string.check_in)
     val checkStateDescription = stringResource(
@@ -275,24 +318,25 @@ private fun HabitCheckButton(
         onClick = onClick,
         shape = RoundedCornerShape(50),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (done) colors.tertiary else colors.surface,
-            contentColor = if (done) colors.onTertiary else colors.primary
+            containerColor = if (done) palette.completedContainer else colors.surface,
+            contentColor = if (done) palette.onCompletedContainer else palette.uncheckedAction
         ),
-        border = if (done) null else BorderStroke(1.5.dp, colors.primary),
+        border = if (done) null else BorderStroke(1.5.dp, palette.uncheckedAction),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
     ) {
         if (done) {
             Box(
                 modifier = Modifier
-                    .size(22.dp)
-                    .background(colors.onTertiary, CircleShape),
+                    // 对勾会随系统字号放大，承载圆形也须放大以免在 2 倍字体下被裁切。
+                    .size(if (largeText) 32.dp else 22.dp)
+                    .background(palette.onCompletedContainer, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "✓",
-                    color = colors.tertiary,
-                    fontSize = 14.sp,
-                    lineHeight = 14.sp,
+                    color = palette.completedContainer,
+                    fontSize = if (largeText) 11.sp else 14.sp,
+                    lineHeight = if (largeText) 11.sp else 14.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -309,6 +353,7 @@ private fun HabitCardUncheckedPreview() {
         HabitItemUiState(
             id = 1,
             name = "阅读",
+            iconKey = IconKey.READING,
             targetPerWeek = 7,
             isDoneToday = false,
             streak = 0,
@@ -324,6 +369,7 @@ private fun HabitCardCompletedPreview() {
         HabitItemUiState(
             id = 1,
             name = "晨练",
+            iconKey = IconKey.EXERCISE,
             targetPerWeek = 5,
             isDoneToday = true,
             streak = 4,
@@ -342,6 +388,7 @@ private fun HabitCardMultiplePreview() {
                     habit = HabitItemUiState(
                         id = 1,
                         name = "晨练",
+                        iconKey = IconKey.EXERCISE,
                         targetPerWeek = 5,
                         isDoneToday = true,
                         streak = 4,
@@ -355,6 +402,7 @@ private fun HabitCardMultiplePreview() {
                     habit = HabitItemUiState(
                         id = 2,
                         name = "阅读",
+                        iconKey = IconKey.READING,
                         targetPerWeek = 7,
                         isDoneToday = false,
                         streak = 0,
@@ -376,6 +424,7 @@ private fun HabitCardLongNamePreview() {
         HabitItemUiState(
             id = 1,
             name = "通勤时阅读 Android 工程实践文章",
+            iconKey = IconKey.READING,
             targetPerWeek = 7,
             isDoneToday = false,
             streak = 12345,
@@ -396,6 +445,7 @@ private fun HabitCardDarkPreview() {
         HabitItemUiState(
             id = 1,
             name = "晨练",
+            iconKey = IconKey.EXERCISE,
             targetPerWeek = 5,
             isDoneToday = true,
             streak = 4,

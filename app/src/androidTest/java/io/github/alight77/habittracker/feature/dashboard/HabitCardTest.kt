@@ -16,10 +16,12 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.alight77.habittracker.domain.icon.IconKey
 import io.github.alight77.habittracker.ui.theme.HabitTrackerTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -88,6 +90,25 @@ class HabitCardTest {
             .assertIsDisplayed()
         composeRule.onNodeWithContentDescription("已完成：阅读")
             .assertHasClickAction()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "已完成"))
+    }
+
+    @Test
+    fun knownIconKey_usesItsCategoryImageWithoutChangingCheckAction() {
+        setHabitCardContent(isDoneToday = false, iconKey = IconKey.READING)
+
+        composeRule.onNodeWithTag("habit_card_icon_reading", useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("打卡：阅读").assertHasClickAction()
+    }
+
+    @Test
+    fun unknownIconKey_usesGeneralImageWithoutChangingCompletionState() {
+        setHabitCardContent(isDoneToday = true, iconKey = IconKey("cycling"))
+
+        composeRule.onNodeWithTag("habit_card_icon_general", useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("已完成：阅读")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "已完成"))
     }
 
@@ -210,6 +231,7 @@ class HabitCardTest {
 
     private fun setHabitCardContent(
         isDoneToday: Boolean,
+        iconKey: IconKey = IconKey.GENERAL,
         targetPerWeek: Int = 3,
         streak: Int = if (isDoneToday) 1 else 0,
         recentDays: List<RecentCheckInDay> = recentCheckInDays(
@@ -224,6 +246,7 @@ class HabitCardTest {
                     habit = HabitItemUiState(
                         id = 1,
                         name = "阅读",
+                        iconKey = iconKey,
                         targetPerWeek = targetPerWeek,
                         isDoneToday = isDoneToday,
                         streak = streak,

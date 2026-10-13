@@ -6,6 +6,7 @@ import io.github.alight77.habittracker.core.time.systemTodayFlow
 import io.github.alight77.habittracker.data.local.HabitDao
 import io.github.alight77.habittracker.data.local.RecordDao
 import io.github.alight77.habittracker.data.repository.HabitRepository
+import io.github.alight77.habittracker.domain.icon.IconKey
 import io.github.alight77.habittracker.domain.usecase.calculateStreak
 import io.github.alight77.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 import io.github.alight77.habittracker.domain.usecase.epochDayToLocalDate
@@ -237,13 +238,15 @@ class DashboardViewModel(
                             today = today
                         )
 
+                        // 保留数据库中的原始 Key；未知类别仅由展示目录回退，不能在读取时降级数据。
                         HabitItemUiState(
-                            habit.id,
-                            habit.name,
-                            habit.targetPerWeek,
-                            mergedDoneToday,
-                            streak,
-                            recentDays
+                            id = habit.id,
+                            name = habit.name,
+                            targetPerWeek = habit.targetPerWeek,
+                            isDoneToday = mergedDoneToday,
+                            streak = streak,
+                            recentDays = recentDays,
+                            iconKey = IconKey(habit.iconKey)
                         )
                     }
 

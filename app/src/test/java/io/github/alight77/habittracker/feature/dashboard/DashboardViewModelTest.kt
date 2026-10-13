@@ -4,6 +4,7 @@ import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.local.HabitDao
 import io.github.alight77.habittracker.data.local.RecordEntity
 import io.github.alight77.habittracker.data.repository.HabitRepository
+import io.github.alight77.habittracker.domain.icon.IconKey
 import io.github.alight77.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 import io.github.alight77.habittracker.testutil.MainDispatcherRule
 import io.github.alight77.habittracker.testutil.TestHabitDao
@@ -74,6 +75,30 @@ class DashboardViewModelTest {
             ),
             state.items.single()
         )
+    }
+
+    @Test
+    fun uiState_keepsKnownAndUnknownIconKeysWithoutChangingStoredValues() = runTest {
+        val habitDao = TestHabitDao(
+            listOf(
+                habit(id = 1, name = "阅读").copy(iconKey = "reading"),
+                habit(id = 2, name = "骑行").copy(iconKey = "cycling")
+            )
+        )
+        val recordDao = TestRecordDao(emptyList())
+        val viewModel = DashboardViewModel(
+            habitDao = habitDao,
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
+            setTodayHabitChecked = acceptedUseCase(),
+            todaySource = flowOf(LocalDate.of(2026, 9, 19))
+        )
+
+        val items = viewModel.uiState.filterIsInstance<DashboardUiState.Success>()
+            .first { it.items.size == 2 }.items
+        assertEquals(IconKey.READING, items[0].iconKey)
+        assertEquals(IconKey("cycling"), items[1].iconKey)
+        assertEquals("cycling", habitDao.getHabitById(2)?.iconKey)
     }
 
     @Test
