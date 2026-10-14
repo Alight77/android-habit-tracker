@@ -102,7 +102,7 @@ class HabitDeletionFlowTest {
 
         composeRule.onNodeWithContentDescription("更多操作：阅读").performClick()
         composeRule.onNodeWithText("删除").performClick()
-        composeRule.onNodeWithText("永久删除").performClick()
+        composeRule.onNodeWithText("确认删除").performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) {
             val state = dashboard.uiState.value as? DashboardUiState.Success
             state?.items?.map { it.id } == listOf(8)
@@ -159,7 +159,7 @@ class HabitDeletionFlowTest {
 
         composeRule.onNodeWithContentDescription("更多操作：阅读").performClick()
         composeRule.onNodeWithText("删除").performClick()
-        composeRule.onNodeWithText("永久删除").performClick()
+        composeRule.onNodeWithText("确认删除").performClick()
         composeRule.onNodeWithText("删除习惯失败，请稍后重试").assertIsDisplayed()
         runBlocking {
             assertNotNull(database.habitDao().getHabitById(7))

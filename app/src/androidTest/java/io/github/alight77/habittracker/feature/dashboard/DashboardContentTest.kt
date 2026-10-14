@@ -288,11 +288,11 @@ class DashboardContentTest {
 
         composeRule.onNodeWithContentDescription("更多操作：阅读").performClick()
         composeRule.onNodeWithText("删除").performClick()
-        composeRule.onNodeWithText("永久删除“阅读”及其全部历史打卡记录？删除后无法恢复。")
+        composeRule.onNodeWithText("删除“阅读”及其全部打卡记录？应用内无法撤销；如有系统备份，恢复后可能重现。")
             .assertIsDisplayed()
         assertEquals(0, deletedHabitId.get())
 
-        composeRule.onNodeWithText("永久删除").performClick()
+        composeRule.onNodeWithText("确认删除").performClick()
         assertEquals(7, deletedHabitId.get())
     }
 
@@ -316,7 +316,7 @@ class DashboardContentTest {
     }
 
     @Test
-    fun deleteDialogExplainsPermanentRecordLossAndCancelKeepsCallbackUntouched() {
+    fun deleteDialogExplainsLocalLossAndBackupRestoreAndCancelKeepsCallbackUntouched() {
         val deletedHabitId = AtomicInteger(0)
         composeRule.setContent {
             DashboardContent(
@@ -331,10 +331,10 @@ class DashboardContentTest {
 
         composeRule.onNodeWithContentDescription("更多操作：阅读").performClick()
         composeRule.onNodeWithText("删除").performClick()
-        // 永久删除的后果必须在 TalkBack 可读取的弹窗正文中完整呈现。
-        composeRule.onNodeWithText("永久删除“阅读”及其全部历史打卡记录？删除后无法恢复。")
+        // 本机删除不可在应用内撤销，但旧系统备份可能带回记录；两层后果都应可朗读。
+        composeRule.onNodeWithText("删除“阅读”及其全部打卡记录？应用内无法撤销；如有系统备份，恢复后可能重现。")
             .assertIsDisplayed()
-        composeRule.onNodeWithText("永久删除").assertIsDisplayed()
+        composeRule.onNodeWithText("确认删除").assertIsDisplayed()
         composeRule.onNodeWithText("取消").performClick()
 
         assertEquals(0, deletedHabitId.get())
@@ -357,7 +357,7 @@ class DashboardContentTest {
         composeRule.onNodeWithContentDescription("更多操作：阅读").performClick()
         composeRule.onNodeWithText("删除").performClick()
         // 同一坐标快速双击；第一击关闭弹窗后，第二击不得删除其他习惯或重复派发。
-        composeRule.onNodeWithText("永久删除").performTouchInput { doubleClick() }
+        composeRule.onNodeWithText("确认删除").performTouchInput { doubleClick() }
 
         assertEquals(listOf(7), deletedHabitIds)
     }

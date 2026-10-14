@@ -366,7 +366,7 @@ class DashboardViewModelTest {
         viewModel.deleteHabit(7)
 
         assertEquals(
-            DashboardUiEvent.ShowMessage("习惯及其历史打卡记录已永久删除"),
+            DashboardUiEvent.ShowMessage("已从此设备删除该习惯及其打卡记录"),
             event.await()
         )
         assertEquals(
@@ -398,7 +398,7 @@ class DashboardViewModelTest {
 
         assertEquals(null, habitDao.getHabitById(7))
         assertEquals(
-            listOf(DashboardUiEvent.ShowMessage("习惯及其历史打卡记录已永久删除")),
+            listOf(DashboardUiEvent.ShowMessage("已从此设备删除该习惯及其打卡记录")),
             events
         )
     }

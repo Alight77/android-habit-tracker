@@ -193,7 +193,7 @@ class DashboardViewModel(
                     optimisticChecked.update { current ->
                         current.filterKeys { key -> key.first != habitId }
                     }
-                    _events.emit(DashboardUiEvent.ShowMessage("习惯及其历史打卡记录已永久删除"))
+                    _events.emit(DashboardUiEvent.ShowMessage("已从此设备删除该习惯及其打卡记录"))
                 }
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
