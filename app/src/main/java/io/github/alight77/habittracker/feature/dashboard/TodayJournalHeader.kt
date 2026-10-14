@@ -22,9 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -75,10 +75,13 @@ internal fun TodayJournalHeader(today: LocalDate, modifier: Modifier = Modifier)
             val fontScale = LocalDensity.current.fontScale
             val narrow = maxWidth < 340.dp
             val compactPaper = narrow || fontScale > 1f
-            val quote = stringResource(
-                if (largeText || fontScale >= 1.25f) R.string.dashboard_encouragement_compact
-                else R.string.dashboard_encouragement
-            )
+            val quotes = LocalContext.current.resources.getStringArray(R.array.dashboard_daily_quotes)
+            val quote = quotes[dailyQuoteIndex(today, quotes.size)]
+            val displayedQuote = if (narrow && fontScale >= 1.75f) {
+                balanceQuoteForNarrowLargeText(quote)
+            } else {
+                quote
+            }
 
             if (isLight && fontScale < 1.25f) {
                 // 纸条图片只作底纹，寄语仍由 Compose 绘制，字号变化时不会失真。
@@ -94,7 +97,7 @@ internal fun TodayJournalHeader(today: LocalDate, modifier: Modifier = Modifier)
                         modifier = Modifier.fillMaxSize()
                     )
                     Text(
-                        text = quote,
+                        text = displayedQuote,
                         color = colors.onSurface,
                         fontFamily = FontFamily.Serif,
                         fontSize = if (compactPaper) 14.sp else 17.sp,
@@ -114,7 +117,7 @@ internal fun TodayJournalHeader(today: LocalDate, modifier: Modifier = Modifier)
                     shadowElevation = if (isLight) 1.dp else 0.dp
                 ) {
                     Text(
-                        text = quote,
+                        text = displayedQuote,
                         color = colors.onSurface,
                         fontFamily = FontFamily.Serif,
                         fontSize = if (fontScale >= 1.25f) 15.sp else 17.sp,
@@ -128,6 +131,25 @@ internal fun TodayJournalHeader(today: LocalDate, modifier: Modifier = Modifier)
             }
         }
     }
+}
+
+internal fun dailyQuoteIndex(today: LocalDate, quoteCount: Int): Int {
+    require(quoteCount > 0)
+    // 以自然日序号轮换，同一天的重组与重启都不会重新抽取寄语。
+    return Math.floorMod(today.toEpochDay(), quoteCount.toLong()).toInt()
+}
+
+internal fun balanceQuoteForNarrowLargeText(quote: String): String {
+    val breakIndex = quote.indexOf('\n')
+    if (breakIndex < 0) return quote
+
+    val secondClause = quote.substring(breakIndex + 1)
+    if (secondClause.length <= 8) return quote
+
+    // 仅调整窄屏大字的换行位置，避免较长后半句留下单独的一两个字。
+    val midpoint = (secondClause.length + 1) / 2
+    return quote.substring(0, breakIndex + 1) +
+        secondClause.substring(0, midpoint) + "\n" + secondClause.substring(midpoint)
 }
 
 private fun formatLunarDate(date: LocalDate): String {

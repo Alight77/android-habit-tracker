@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">习惯打卡</string>
+    <string name="app_name">HabitTracker</string>
     <string name="dashboard_title">HabitTracker</string>
     <string name="back">返回</string>
     <string name="add_habit">新增习惯</string>
@@ -54,10 +54,28 @@
     <string name="stats_page_title">成长记录</string>
     <string name="loading">加载中…</string>
     <string name="start_with_habit">从一个小习惯开始</string>
-    <string name="dashboard_empty_guidance">点击右下角按钮，创建第一个习惯</string>
+    <string name="dashboard_empty_guidance">点＋创建习惯</string>
     <string name="stats_empty_guidance">切换到今日，创建第一个习惯</string>
-    <string name="dashboard_encouragement">积累微小的坚持，\n就是在创造更好的自己。</string>
-    <string name="dashboard_encouragement_compact">积累微小的坚持，\n就是在创造\n更好的自己。</string>
+    <string-array name="dashboard_daily_quotes">
+        <item>积累微小的坚持，\n就是创造更好的自己。</item>
+        <item>把今天过好，\n就是最好的开始。</item>
+        <item>微小的坚持，\n也在慢慢生根。</item>
+        <item>不必着急，\n按自己的节奏向前。</item>
+        <item>每一次认真，\n都在为明天积蓄力量。</item>
+        <item>一点一点向前，\n日子会有新的模样。</item>
+        <item>好的改变，\n常从平凡的一天开始。</item>
+        <item>走得慢一些，\n也能走向想去的地方。</item>
+        <item>把小事做好，\n成长就藏在其中。</item>
+        <item>今天的努力，\n会成为明天的底气。</item>
+        <item>愿意再次开始，\n本身就是一种勇气。</item>
+        <item>不用追赶谁，\n先走好自己的每一步。</item>
+        <item>给自己一点时间，\n改变会慢慢发生。</item>
+        <item>把想做的事，\n放进今天的行动里。</item>
+        <item>有些成长很安静，\n却一直在发生。</item>
+        <item>重复的小事，\n正在悄悄改变日常。</item>
+        <item>认真过好今天，\n是送给自己的礼物。</item>
+        <item>让习惯慢慢生长，\n也让自己慢慢变好。</item>
+    </string-array>
     <string name="check_in">打卡</string>
     <string name="completed">已完成</string>
     <string name="habit_check_content_description">%1$s：%2$s</string>

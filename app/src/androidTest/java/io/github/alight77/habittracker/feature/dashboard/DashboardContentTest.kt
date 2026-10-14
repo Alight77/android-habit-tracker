@@ -8,6 +8,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.doubleClick
 import androidx.compose.ui.test.hasScrollAction
@@ -22,6 +23,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.ui.theme.HabitTrackerTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -55,14 +57,41 @@ class DashboardContentTest {
             .fetchSemanticsNode().boundsInRoot
         val emptyContent = composeRule.onNodeWithTag("dashboardEmptyContent")
             .fetchSemanticsNode().boundsInRoot
-        val headerText = composeRule.onNodeWithText("积累微小的坚持，", substring = true)
+        val headerText = composeRule.onNodeWithText(expectedQuote(LocalDate.of(2026, 10, 11)))
             .fetchSemanticsNode().boundsInRoot
 
         // 无习惯时提示语随页头与可用高度定位，不能紧贴页头。
         assertTrue(emptyContent.top > headerText.bottom)
         assertTrue(abs(emptyContent.center.y - emptyArea.center.y) < 2f)
         composeRule.onNodeWithText("从一个小习惯开始").assertIsDisplayed()
-        composeRule.onNodeWithText("点击右下角按钮，创建第一个习惯").assertIsDisplayed()
+        composeRule.onNodeWithText("点＋创建习惯").assertIsDisplayed()
+    }
+
+    @Test
+    fun emptyGuidanceStaysClearOfAddButtonAt320dpAnd2xFont() {
+        composeRule.setContent {
+            val deviceDensity = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(deviceDensity.density, 2f)) {
+                Box(modifier = Modifier.width(320.dp).height(640.dp)) {
+                    DashboardContent(
+                        uiState = DashboardUiState.Success(emptyList(), LocalDate.of(2026, 10, 11)),
+                        onCheckClick = {},
+                        onAddClick = {},
+                        onEditClick = {},
+                        onDeleteHabit = {},
+                        onRetry = {}
+                    )
+                }
+            }
+        }
+
+        val guidance = composeRule.onNodeWithText("点＋创建习惯")
+            .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val addButton = composeRule.onNodeWithContentDescription("新增习惯")
+            .fetchSemanticsNode().boundsInRoot
+
+        // 放大字号时，空状态引导文字需完整留在悬浮按钮左侧。
+        assertTrue(guidance.right < addButton.left)
     }
 
     @Test
@@ -95,7 +124,7 @@ class DashboardContentTest {
             state.value = DashboardUiState.Success(emptyList(), LocalDate.of(2026, 10, 11))
         }
         composeRule.onNodeWithText("加载习惯数据失败，请重试").assertDoesNotExist()
-        composeRule.onNodeWithText("点击右下角按钮，创建第一个习惯").assertIsDisplayed()
+        composeRule.onNodeWithText("点＋创建习惯").assertIsDisplayed()
     }
 
     @Test
@@ -126,8 +155,10 @@ class DashboardContentTest {
 
     @Test
     fun dateHeaderFollowsSuccessTodayForEmptyDashboard() {
+        val firstDate = LocalDate.of(2026, 10, 11)
+        val nextDate = firstDate.plusDays(1)
         val state = mutableStateOf<DashboardUiState>(
-            DashboardUiState.Success(emptyList(), LocalDate.of(2026, 10, 11))
+            DashboardUiState.Success(emptyList(), firstDate)
         )
         composeRule.setContent {
             DashboardContent(
@@ -142,16 +173,58 @@ class DashboardContentTest {
 
         composeRule.onNodeWithText("10月11日").assertIsDisplayed()
         composeRule.onNodeWithText("周日 · 农历", substring = true).assertIsDisplayed()
-        composeRule.onNodeWithText("积累微小的坚持，", substring = true).assertIsDisplayed()
+        val firstQuote = expectedQuote(firstDate)
+        val nextQuote = expectedQuote(nextDate)
+        composeRule.onNodeWithText(firstQuote).assertIsDisplayed()
+
+        composeRule.runOnUiThread {
+            state.value = DashboardUiState.Success(emptyList(), firstDate)
+        }
+        composeRule.onNodeWithText(firstQuote).assertIsDisplayed()
 
         // 模拟既有日期来源更新；页头必须立即跟随 Success.today，而非自行读取系统时钟。
         composeRule.runOnUiThread {
-            state.value = DashboardUiState.Success(emptyList(), LocalDate.of(2026, 10, 12))
+            state.value = DashboardUiState.Success(emptyList(), nextDate)
         }
 
         composeRule.onNodeWithText("10月12日").assertIsDisplayed()
         composeRule.onNodeWithText("周一 · 农历", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText(nextQuote).assertIsDisplayed()
+        composeRule.onNodeWithText(firstQuote).assertDoesNotExist()
         composeRule.onNodeWithText("10月11日").assertDoesNotExist()
+    }
+
+    @Test
+    fun everyDailyQuoteFitsInsideHeaderAt320dpAndDoubleFontScale() {
+        val firstDate = LocalDate.of(2026, 10, 11)
+        val displayedDate = mutableStateOf(firstDate)
+        composeRule.setContent {
+            val deviceDensity = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(deviceDensity.density, 2f)) {
+                HabitTrackerTheme {
+                    Box(Modifier.width(320.dp).testTag("narrowQuoteArea")) {
+                        TodayJournalHeader(today = displayedDate.value)
+                    }
+                }
+            }
+        }
+
+        val quoteCount = composeRule.activity.resources
+            .getStringArray(R.array.dashboard_daily_quotes).size
+        repeat(quoteCount) { dayOffset ->
+            val date = firstDate.plusDays(dayOffset.toLong())
+            composeRule.runOnUiThread { displayedDate.value = date }
+            val quoteBounds = composeRule.onNodeWithText(expectedQuote(date, narrowLargeText = true))
+                .assertIsDisplayed()
+                .fetchSemanticsNode().boundsInRoot
+            val area = composeRule.onNodeWithTag("narrowQuoteArea")
+                .fetchSemanticsNode().boundsInRoot
+
+            assertTrue("quote exceeds 320dp width", quoteBounds.left >= area.left - 1f)
+            assertTrue("quote exceeds 320dp width", quoteBounds.right <= area.right + 1f)
+            assertTrue("quote exceeds header height", quoteBounds.top >= area.top - 1f)
+            assertTrue("quote exceeds header height", quoteBounds.bottom <= area.bottom + 1f)
+        }
     }
 
     @Test
@@ -302,4 +375,10 @@ class DashboardContentTest {
         ),
         today = LocalDate.of(2026, 9, 19)
     )
+
+    private fun expectedQuote(date: LocalDate, narrowLargeText: Boolean = false): String {
+        val quotes = composeRule.activity.resources.getStringArray(R.array.dashboard_daily_quotes)
+        val quote = quotes[dailyQuoteIndex(date, quotes.size)]
+        return if (narrowLargeText) balanceQuoteForNarrowLargeText(quote) else quote
+    }
 }
