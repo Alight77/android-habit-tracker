@@ -2,11 +2,8 @@ package io.github.alight77.habittracker.feature.stats
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -76,39 +73,31 @@ internal fun LoadingStats(modifier: Modifier = Modifier) {
 
 @Composable
 internal fun ErrorStats(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val viewportHeight = this.maxHeight
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            // 错误信息很长或屏幕很矮时仍可滚动触达重试；通常高度下状态卡片居中。
+    // 滚动由统计页公共容器提供；错误内容超出视口时，重试与页脚仍可依次滚动触达。
+    Box(modifier = modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+        StatsStatusPanel {
             Box(
-                modifier = Modifier.fillMaxWidth().heightIn(min = viewportHeight).padding(24.dp),
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(MaterialTheme.colorScheme.errorContainer, CircleShape)
+                    .clearAndSetSemantics { },
                 contentAlignment = Alignment.Center
             ) {
-                StatsStatusPanel {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .background(MaterialTheme.colorScheme.errorContainer, CircleShape)
-                            .clearAndSetSemantics { },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "!",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center
-                    )
-                    Button(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(stringResource(R.string.retry))
-                    }
-                }
+                Text(
+                    text = "!",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+            Button(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.retry))
             }
         }
     }

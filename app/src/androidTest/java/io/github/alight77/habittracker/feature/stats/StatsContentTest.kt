@@ -2,6 +2,7 @@ package io.github.alight77.habittracker.feature.stats
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.CompositionLocalProvider
@@ -11,15 +12,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -31,6 +36,105 @@ class StatsContentTest {
 
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun privacyFooterIsAvailableAcrossStatsStatesAboveBottomBar() {
+        var state by mutableStateOf<StatsUiState>(StatsUiState.Loading)
+        composeRule.setContent {
+            StatsContent(
+                uiState = state,
+                onRetry = {},
+                bottomBar = {
+                    Box(Modifier.fillMaxWidth().height(56.dp).testTag("testBottomBar"))
+                },
+                onOpenPrivacyPolicy = { true }
+            )
+        }
+
+        listOf(
+            StatsUiState.Loading,
+            StatsUiState.Success(StatsSummary(0, 0, 0, 0, 0, emptyList())),
+            StatsUiState.Success(StatsSummary(1, 0, 0, 0, 0, emptyList())),
+            StatsUiState.Error("加载统计数据失败，请重试")
+        ).forEach { nextState ->
+            composeRule.runOnUiThread { state = nextState }
+            val footer = composeRule.onNodeWithText("隐私政策")
+                .performScrollTo()
+                .assertIsDisplayed()
+                .assertHasClickAction()
+                .fetchSemanticsNode()
+                .boundsInRoot
+            val bottomBarTop = composeRule.onNodeWithTag("testBottomBar")
+                .fetchSemanticsNode().boundsInRoot.top
+            val minTapPixels = 48f * composeRule.activity.resources.displayMetrics.density
+            assertTrue("privacy footer touch target is too small", footer.width >= minTapPixels - 1f)
+            assertTrue("privacy footer touch target is too short", footer.height >= minTapPixels - 1f)
+            assertTrue("privacy footer overlaps bottom navigation", footer.bottom <= bottomBarTop + 1f)
+        }
+    }
+
+    @Test
+    fun privacyFooterOpensExpectedHttpsUrlWithoutChangingStats() {
+        var openedUrl: String? = null
+        composeRule.setContent {
+            StatsContent(
+                uiState = StatsUiState.Success(StatsSummary(1, 0, 0, 0, 0, emptyList())),
+                onRetry = {},
+                onOpenPrivacyPolicy = { uri ->
+                    openedUrl = uri.toString()
+                    true
+                }
+            )
+        }
+
+        composeRule.onNodeWithText("隐私政策").performScrollTo().performClick()
+        assertEquals("https://alight77.github.io/android-habit-tracker/", openedUrl)
+        composeRule.onNodeWithText("今天的坚持").assertIsDisplayed()
+    }
+
+    @Test
+    fun privacyFooterShowsFeedbackWhenNoAppCanOpenUrlAtLargeFont() {
+        composeRule.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, 2f)) {
+                Box(Modifier.width(320.dp).height(700.dp).testTag("narrowStats")) {
+                    StatsContent(
+                        uiState = StatsUiState.Error("加载统计数据失败，请重试"),
+                        onRetry = {},
+                        onOpenPrivacyPolicy = { false }
+                    )
+                }
+            }
+        }
+
+        val footer = composeRule.onNodeWithText("隐私政策")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertHasClickAction()
+            .fetchSemanticsNode().boundsInRoot
+        val screen = composeRule.onNodeWithTag("narrowStats")
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue("privacy footer is clipped on 320dp", footer.left >= screen.left && footer.right <= screen.right)
+        composeRule.onNodeWithText("隐私政策").performClick()
+        composeRule.onNodeWithText("无法打开隐私政策，请检查设备上的浏览器")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun privacyFooterIsReachedByScrollingPastStatsInsteadOfStayingOnScreen() {
+        composeRule.setContent {
+            Box(Modifier.width(320.dp).height(500.dp)) {
+                StatsContent(
+                    uiState = StatsUiState.Success(StatsSummary(1, 0, 0, 0, 0, emptyList())),
+                    onRetry = {},
+                    onOpenPrivacyPolicy = { true }
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("隐私政策").assertIsNotDisplayed()
+        composeRule.onNodeWithText("隐私政策").performScrollTo().assertIsDisplayed()
+    }
 
     @Test
     fun noHabitsShowsGuidanceInsteadOfZeroFootprint() {

@@ -50,6 +50,8 @@
     <string name="saving">保存中…</string>
     <string name="retry">重试</string>
     <string name="statistics">统计</string>
+    <string name="privacy_policy">隐私政策</string>
+    <string name="privacy_policy_open_failed">无法打开隐私政策，请检查设备上的浏览器</string>
     <string name="nav_today">今日</string>
     <string name="stats_page_title">成长记录</string>
     <string name="loading">加载中…</string>
