@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HabitTracker 隐私政策</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+      font-size: 16px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #fff;
+      color: #202124;
+      line-height: 1.75;
+      overflow-wrap: anywhere;
+    }
+    main {
+      max-width: 48rem;
+      margin: 0 auto;
+      padding: 1.25rem 1.25rem 3rem;
+    }
+    h1, h2 { line-height: 1.35; }
+    h1 { margin: 0 0 0.75rem; font-size: 1.85rem; }
+    h2 { margin: 0 0 0.65rem; font-size: 1.25rem; }
+    p { margin: 0 0 0.9rem; }
+    header { padding: 0.5rem 0 1.25rem; border-bottom: 1px solid #d9dce0; }
+    section { padding-top: 1.5rem; }
+    .meta { margin-bottom: 0.35rem; }
+    @media (max-width: 360px) {
+      main { padding: 1rem 1rem 2.5rem; }
+      h1 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>HabitTracker 隐私政策</h1>
+      <p class="meta">开发者：Alight77</p>
+      <p class="meta">生效日期：2026年10月20日</p>
+    </header>
+
+    <section aria-labelledby="scope">
+      <h2 id="scope">1. 适用范围</h2>
+      <p>本政策适用于 HabitTracker Android 应用，说明应用如何处理您创建的习惯和打卡记录，以及 Android 系统备份可能产生的影响。</p>
+    </section>
+
+    <section aria-labelledby="data">
+      <h2 id="data">2. 应用处理哪些数据</h2>
+      <p>创建或编辑习惯时，应用保存您输入的习惯名称、设置的每周目标和选择的图标。应用还会记录习惯创建时间。您打卡时，应用保存对应日期及完成状态，并用这些记录展示今日状态、历史记录和统计结果。根据习惯名称推荐图标的计算在设备上完成。</p>
+      <p>为兼容已有数据，数据库仍保留“描述”字段；当前新增和编辑界面不提供填写描述的入口。如果已有数据包含描述，它会随对应习惯保存在数据库中。</p>
+    </section>
+
+    <section aria-labelledby="storage">
+      <h2 id="storage">3. 数据存储与对外传输</h2>
+      <p>习惯和打卡记录保存在设备上由 Android 提供的应用私有数据库中。HabitTracker 当前不提供账号、登录或由开发者运营的云同步服务，也没有将这些记录同步至开发者服务器的业务功能。Android 系统备份与设备迁移可能另行处理该数据库，具体见下一节。</p>
+    </section>
+
+    <section aria-labelledby="backup">
+      <h2 id="backup">4. Android 系统备份与恢复</h2>
+      <p>HabitTracker 允许 Android 系统将应用数据库纳入云备份和设备迁移。如果您的设备使用 Google 提供的 Android 云备份，且您已开启备份并满足系统条件，数据库可能进入与您的 Google 账号关联的系统备份。部分设备也可能通过 Android 或设备厂商提供的设备间迁移流程传输数据库。系统云备份和设备迁移均不等同于 HabitTracker 向开发者服务器上传记录。</p>
+      <p>是否实际备份或迁移、何时执行以及能否恢复，取决于 Android 版本、设备、您的系统设置和相应服务条件。应用不能保证备份或恢复一定成功，也不能保证备份立即反映您刚做的修改。</p>
+      <p>如果系统保留了较早的备份，恢复时，已从当前设备删除的习惯及打卡记录仍可能重新出现。HabitTracker 不能通过应用内删除操作清除已有的系统备份。</p>
+    </section>
+
+    <section aria-labelledby="deletion">
+      <h2 id="deletion">5. 数据保留与删除</h2>
+      <p>本机数据会保留到您删除相应习惯，或通过 Android 系统清除应用数据、卸载应用。您可以在习惯卡片的更多操作中选择“删除”，查看确认提示后删除该习惯。确认删除会从当前应用数据库移除该习惯及其关联的打卡记录；此操作不能在应用内撤销。</p>
+      <p>清除本机数据或卸载应用不代表较早的系统备份也已删除。若以后恢复该备份，旧记录可能重新出现。HabitTracker 当前没有账号删除、应用内一键清空全部数据或远程删除系统备份的功能。</p>
+    </section>
+
+    <section aria-labelledby="security">
+      <h2 id="security">6. 数据安全与外部服务</h2>
+      <p>本机记录使用 Android 的应用私有存储。云备份和设备迁移由 Android 系统及相应服务处理，其可用性和保护方式取决于设备与系统条件；我们不承诺所有备份都采用同一种加密方式。</p>
+      <p>如果您通过应用内链接在浏览器中打开本政策，浏览器会向承载本页面的网站请求内容。网页托管服务可能接收提供页面所需的网络连接信息。本页面自身不包含广告、分析脚本或其他远程资源，也不设置 Cookie 或使用浏览器本地存储。网页访问与应用内保存习惯记录是不同的处理过程。</p>
+    </section>
+
+    <section aria-labelledby="contact">
+      <h2 id="contact">7. 联系方式</h2>
+      <p>如对本政策或 HabitTracker 的数据处理有疑问，请联系：<a href="mailto:alightx77@gmail.com">alightx77@gmail.com</a>。</p>
+    </section>
+
+    <section aria-labelledby="updates">
+      <h2 id="updates">8. 政策更新</h2>
+      <p>如应用的数据处理方式发生变化，我们会审查并更新本政策。更新后的内容和生效日期将在政策页面展示。</p>
+    </section>
+  </main>
+</body>
+</html>
