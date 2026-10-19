@@ -1,6 +1,8 @@
 package io.github.alight77.habittracker.ui.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavType
@@ -39,7 +41,7 @@ private fun NavHostController.navigateToTopLevel(destination: TopLevelDestinatio
 fun HabitNavHost(
     navController: NavHostController,
     dashboardViewModel: DashboardViewModel,
-    addHabitViewModel: AddHabitViewModel,
+    addHabitViewModelFactory: ViewModelProvider.Factory,
     statsViewModel: StatsViewModel,
     repository: HabitRepository
 ) {
@@ -62,12 +64,23 @@ fun HabitNavHost(
             )
         }
 
-        composable(ROUTE_ADD_HABIT) {
-            AddHabitScreen(
-                viewModel = addHabitViewModel,
-                onBackClick = {
+        composable(ROUTE_ADD_HABIT) { backStackEntry ->
+            val addHabitViewModel = remember(backStackEntry) {
+                ViewModelProvider(backStackEntry, addHabitViewModelFactory)[AddHabitViewModel::class.java]
+            }
+            val exitRequested = remember(backStackEntry) { mutableStateOf(false) }
+            val leaveAddHabit = {
+                val state = addHabitViewModel.uiState.value
+                // 写入未结束时不能销毁持有协程的导航条目；成功写入后的返回请求由页面消费后再弹栈。
+                if (!exitRequested.value && !state.isSaving && state.navigateBackRequestId == null) {
+                    exitRequested.value = true
                     navController.popBackStack()
                 }
+            }
+            BackHandler { leaveAddHabit() }
+            AddHabitScreen(
+                viewModel = addHabitViewModel,
+                onBackClick = leaveAddHabit
             )
         }
 

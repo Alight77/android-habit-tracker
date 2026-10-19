@@ -6,7 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.rememberNavController
-import io.github.alight77.habittracker.feature.addhabit.AddHabitViewModel
 import io.github.alight77.habittracker.feature.dashboard.DashboardViewModel
 import io.github.alight77.habittracker.feature.stats.StatsViewModel
 import io.github.alight77.habittracker.ui.navigation.HabitNavHost
@@ -20,7 +19,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val addHabitViewModel = ViewModelProvider(this, appContainer.viewModelFactory)[AddHabitViewModel::class.java]
         val dashboardViewModel = ViewModelProvider(this, appContainer.viewModelFactory)[DashboardViewModel::class.java]
         val statsViewModel = ViewModelProvider(this, appContainer.viewModelFactory)[StatsViewModel::class.java]
 
@@ -32,7 +30,7 @@ class MainActivity : ComponentActivity() {
                 HabitNavHost(
                     navController = navController,
                     dashboardViewModel = dashboardViewModel,
-                    addHabitViewModel = addHabitViewModel,
+                    addHabitViewModelFactory = appContainer.viewModelFactory,
                     statsViewModel = statsViewModel,
                     repository = appContainer.repository
                 )
