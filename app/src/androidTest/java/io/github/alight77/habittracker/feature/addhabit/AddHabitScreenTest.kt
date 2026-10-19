@@ -2,10 +2,12 @@ package io.github.alight77.habittracker.feature.addhabit
 
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.Rect
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
@@ -432,6 +434,69 @@ class AddHabitScreenTest {
     }
 
     @Test
+    fun englishValidationAndSaveRemainReachableWithIme() {
+        val stableViewModel = viewModel()
+        stableViewModel.saveHabit()
+        val imeBottomPx = AtomicInteger(0)
+        val keyboardController = AtomicReference<SoftwareKeyboardController>()
+        composeRule.runOnUiThread { composeRule.activity.enableEdgeToEdge() }
+        composeRule.setContent {
+            val configuration = Configuration(composeRule.activity.resources.configuration).apply {
+                setLocale(Locale.US)
+            }
+            val localizedContext = composeRule.activity.createConfigurationContext(configuration)
+            val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+            val controller = LocalSoftwareKeyboardController.current
+            SideEffect {
+                imeBottomPx.set(imeBottom)
+                keyboardController.set(controller)
+            }
+            CompositionLocalProvider(
+                LocalContext provides localizedContext,
+                LocalConfiguration provides configuration
+            ) {
+                Box(Modifier.width(320.dp).fillMaxHeight().testTag("imeAddHabit")) {
+                    AddHabitScreen(stableViewModel, onBackClick = {})
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("habit_name_input").performScrollTo().performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) { imeBottomPx.get() > 0 }
+        composeRule.onNodeWithText("Please enter a habit name.")
+            .performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Save habit").performScrollTo().assertIsDisplayed()
+        val saveBounds = composeRule.onNodeWithText("Save habit").getUnclippedBoundsInRoot()
+        val density = composeRule.density.density
+        // 窗口可能已被系统缩到 IME 上方；可见边界避免再减一次键盘高度。
+        val visibleFrame = Rect()
+        composeRule.activity.window.decorView.getWindowVisibleDisplayFrame(visibleFrame)
+        val keyboardTopPx = visibleFrame.bottom
+        val saveBottomPx = saveBounds.bottom.value * density
+        val titleBottomDp = composeRule.onNodeWithText("Add habit")
+            .getUnclippedBoundsInRoot().bottom.value
+        val minimumKeyboardTopPx =
+            (titleBottomDp + (saveBounds.bottom - saveBounds.top).value + 16f) * density
+        if (keyboardTopPx >= minimumKeyboardTopPx) {
+            assertTrue(
+                "English save action is behind the IME: buttonBottom=$saveBottomPx, visibleBottom=$keyboardTopPx, decorHeight=${composeRule.activity.window.decorView.height}, imeBottom=${imeBottomPx.get()}",
+                saveBottomPx <= keyboardTopPx + 1f
+            )
+        } else {
+            composeRule.runOnUiThread { keyboardController.get().hide() }
+            composeRule.waitUntil(timeoutMillis = 5_000L) { imeBottomPx.get() == 0 }
+            composeRule.onNodeWithText("Save habit").performScrollTo().assertIsDisplayed()
+        }
+        composeRule.onNodeWithText("Save habit").performClick()
+        composeRule.onNodeWithText("Please enter a habit name.")
+            .performScrollTo().assertIsDisplayed()
+        if (imeBottomPx.get() > 0) {
+            composeRule.runOnUiThread { keyboardController.get().hide() }
+            composeRule.waitUntil(timeoutMillis = 5_000L) { imeBottomPx.get() == 0 }
+        }
+    }
+
+    @Test
     fun compactViewport_longNameAndSaveRemainReachable() {
         val longName = "每天阅读三十分钟并记录心得和复盘计划"
         val backClickCount = AtomicInteger(0)
@@ -484,7 +549,9 @@ class AddHabitScreenTest {
         val saveBounds = composeRule.onNodeWithText("保存习惯").getUnclippedBoundsInRoot()
         val density = composeRule.density.density
         val saveBottomPx = saveBounds.bottom.value * density
-        val keyboardTopPx = composeRule.activity.window.decorView.height - imeBottomPx.get()
+        val visibleFrame = Rect()
+        composeRule.activity.window.decorView.getWindowVisibleDisplayFrame(visibleFrame)
+        val keyboardTopPx = visibleFrame.bottom
         val titleBottomDp = composeRule.onNodeWithText("新增习惯")
             .getUnclippedBoundsInRoot().bottom.value
         val minimumKeyboardTopPx =

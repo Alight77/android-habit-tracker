@@ -2,8 +2,11 @@ package io.github.alight77.habittracker.ui.component
 
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,8 +32,15 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -44,6 +56,7 @@ import io.github.alight77.habittracker.domain.model.WeeklyTargetConstraints.MAX_
 import io.github.alight77.habittracker.domain.model.WeeklyTargetConstraints.MIN_TARGET_PER_WEEK
 import io.github.alight77.habittracker.ui.theme.HabitTrackerTheme
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HabitFormContent(
     name: String,
@@ -72,6 +85,13 @@ fun HabitFormContent(
     }
     val canDecrease = !isSaving && targetPerWeek > MIN_TARGET_PER_WEEK
     val canIncrease = !isSaving && targetPerWeek < MAX_TARGET_PER_WEEK
+    val nameBringIntoViewRequester = remember { BringIntoViewRequester() }
+    var isNameFocused by remember { mutableStateOf(false) }
+    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+    LaunchedEffect(isNameFocused, imeBottom) {
+        // 首次聚焦先于键盘展开；视口随后缩小时按实际 IME Insets 再定位当前输入框。
+        if (isNameFocused && imeBottom > 0) nameBringIntoViewRequester.bringIntoView()
+    }
     val stepperColors = IconButtonDefaults.outlinedIconButtonColors(
         contentColor = colors.onSurface,
         disabledContentColor = colors.onSurfaceVariant.copy(alpha = 0.45f)
@@ -109,7 +129,11 @@ fun HabitFormContent(
             OutlinedTextField(
                 value = name,
                 onValueChange = onNameChanged,
-                modifier = Modifier.fillMaxWidth().testTag("habit_name_input"),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bringIntoViewRequester(nameBringIntoViewRequester)
+                    .onFocusChanged { isNameFocused = it.isFocused }
+                    .testTag("habit_name_input"),
                 label = { Text(stringResource(R.string.habit_name)) },
                 placeholder = { Text(stringResource(R.string.habit_name_example)) },
                 textStyle = MaterialTheme.typography.bodyLarge,

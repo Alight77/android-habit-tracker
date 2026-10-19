@@ -2,6 +2,7 @@ package io.github.alight77.habittracker.feature.edit
 
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.Rect
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
@@ -291,7 +292,10 @@ class EditHabitScreenTest {
         val saveBounds = composeRule.onNodeWithText("保存修改").getUnclippedBoundsInRoot()
         val density = composeRule.density.density
         val saveBottomPx = saveBounds.bottom.value * density
-        val keyboardTopPx = composeRule.activity.window.decorView.height - imeBottomPx.get()
+        // 窗口可能已被系统缩到 IME 上方；可见边界避免再减一次键盘高度。
+        val visibleFrame = Rect()
+        composeRule.activity.window.decorView.getWindowVisibleDisplayFrame(visibleFrame)
+        val keyboardTopPx = visibleFrame.bottom
         val titleBottomDp = composeRule.onNodeWithText("编辑习惯")
             .getUnclippedBoundsInRoot().bottom.value
         val minimumKeyboardTopPx =
@@ -576,6 +580,70 @@ class EditHabitScreenTest {
         composeRule.onNodeWithText("重试").performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) { readCount.get() == 2 }
         composeRule.onNodeWithText("加载习惯失败，请稍后重试").assertIsDisplayed()
+    }
+
+    @Test
+    fun englishValidationAndSaveRemainReachableWithIme() {
+        val habitId = insertTestHabit()
+        val stableViewModel = EditHabitViewModel(
+            HabitRepository(database.habitDao(), database.recordDao()), habitId
+        )
+        val imeBottomPx = AtomicInteger(0)
+        val backClickCount = AtomicInteger(0)
+        val keyboardController = AtomicReference<SoftwareKeyboardController>()
+        composeRule.runOnUiThread { composeRule.activity.enableEdgeToEdge() }
+        composeRule.setContent {
+            val configuration = Configuration(composeRule.activity.resources.configuration).apply {
+                setLocale(Locale.US)
+            }
+            CompositionLocalProvider(
+                LocalContext provides composeRule.activity.createConfigurationContext(configuration),
+                LocalConfiguration provides configuration
+            ) {
+                val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+                val controller = LocalSoftwareKeyboardController.current
+                SideEffect {
+                    imeBottomPx.set(imeBottom)
+                    keyboardController.set(controller)
+                }
+                EditHabitScreen(stableViewModel, onBackClick = { backClickCount.incrementAndGet() })
+            }
+        }
+
+        composeRule.onNode(hasSetTextAction()).performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) { imeBottomPx.get() > 0 }
+        composeRule.onNode(hasSetTextAction()).performTextClearance()
+        composeRule.onNode(hasSetTextAction()).performTextInput("   ")
+        composeRule.onNodeWithText("Save changes").performScrollTo().performClick()
+        composeRule.onNodeWithText("Please enter a habit name.")
+            .performScrollTo().assertIsDisplayed()
+        composeRule.onNode(hasSetTextAction()).performTextClearance()
+        composeRule.onNode(hasSetTextAction()).performTextInput("Read daily")
+        composeRule.onNodeWithText("Save changes").performScrollTo()
+
+        val saveBounds = composeRule.onNodeWithText("Save changes").getUnclippedBoundsInRoot()
+        val density = composeRule.density.density
+        val saveBottomPx = saveBounds.bottom.value * density
+        val visibleFrame = Rect()
+        composeRule.activity.window.decorView.getWindowVisibleDisplayFrame(visibleFrame)
+        val keyboardTopPx = visibleFrame.bottom
+        val titleBottomDp = composeRule.onNodeWithText("Edit habit")
+            .getUnclippedBoundsInRoot().bottom.value
+        val minimumKeyboardTopPx =
+            (titleBottomDp + (saveBounds.bottom - saveBounds.top).value + 16f) * density
+        if (keyboardTopPx >= minimumKeyboardTopPx) {
+            assertTrue(
+                "Save changes button must be above IME: buttonBottom=$saveBottomPx, keyboardTop=$keyboardTopPx",
+                saveBottomPx <= keyboardTopPx + 1f
+            )
+        } else {
+            composeRule.runOnUiThread { keyboardController.get().hide() }
+            composeRule.waitUntil(timeoutMillis = 5_000L) { imeBottomPx.get() == 0 }
+            composeRule.onNodeWithText("Save changes").performScrollTo().assertIsDisplayed()
+        }
+        composeRule.onNodeWithText("Save changes").performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) { backClickCount.get() == 1 }
+        assertEquals("Read daily", runBlocking { database.habitDao().getHabitById(habitId)?.name })
     }
 
     private fun assertLoadErrorFollowsUiConfiguration(
