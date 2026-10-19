@@ -1,8 +1,10 @@
 package io.github.alight77.habittracker.feature.edit
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.repository.HabitRepository
 import io.github.alight77.habittracker.domain.icon.HabitIconMatcher
@@ -26,15 +28,15 @@ data class EditHabitUiState(
     // 原始未知 Key 同样保存在草稿中；仅在展示时由 Catalog 回退。
     val iconKey: IconKey = IconKey.GENERAL,
     val targetPerWeek: Int = MAX_TARGET_PER_WEEK,
-    val nameError: String? = null,
+    @param:StringRes val nameErrorResId: Int? = null,
     val isLoading: Boolean = true,
-    val loadError: String? = null,
+    @param:StringRes val loadErrorResId: Int? = null,
     val isSaving: Boolean = false,
     val navigateBackRequestId: Long? = null
 )
 
 sealed interface EditHabitUiEvent {
-    data class SaveFailed(val message: String) : EditHabitUiEvent
+    data class SaveFailed(@param:StringRes val messageResId: Int) : EditHabitUiEvent
 }
 
 class EditHabitViewModel(
@@ -61,21 +63,21 @@ class EditHabitViewModel(
 
     fun onNameChanged(name: String) {
         _uiState.update { state ->
-            if (state.isLoading || state.isSaving || state.loadError != null) state
-            else state.copy(name = name, nameError = null)
+            if (state.isLoading || state.isSaving || state.loadErrorResId != null) state
+            else state.copy(name = name, nameErrorResId = null)
         }
     }
 
     fun selectIcon(key: IconKey) {
         _uiState.update { state ->
-            if (state.isLoading || state.isSaving || state.loadError != null || key !in IconKey.known) state
+            if (state.isLoading || state.isSaving || state.loadErrorResId != null || key !in IconKey.known) state
             else state.copy(iconKey = key)
         }
     }
 
     fun recommendIconForCurrentName() {
         _uiState.update { state ->
-            if (state.isLoading || state.isSaving || state.loadError != null) state
+            if (state.isLoading || state.isSaving || state.loadErrorResId != null) state
             else state.copy(iconKey = HabitIconMatcher.match(state.name))
         }
     }
@@ -99,15 +101,15 @@ class EditHabitViewModel(
 
         if (normalizedName.isEmpty()) {
             _uiState.update { currentState ->
-                currentState.copy(nameError = "请输入习惯名称")
+                currentState.copy(nameErrorResId = R.string.habit_name_required)
             }
             return
         }
 
-        if (state.isLoading || state.isSaving || state.loadError != null) return
+        if (state.isLoading || state.isSaving || state.loadErrorResId != null) return
 
         _uiState.update { currentState ->
-            currentState.copy(isSaving = true, nameError = null)
+            currentState.copy(isSaving = true, nameErrorResId = null)
         }
 
         viewModelScope.launch(dispatcher) {
@@ -128,7 +130,7 @@ class EditHabitViewModel(
                 _uiState.update { currentState ->
                     currentState.copy(isSaving = false)
                 }
-                _events.emit(EditHabitUiEvent.SaveFailed("保存失败，请稍后重试"))
+                _events.emit(EditHabitUiEvent.SaveFailed(R.string.habit_save_failed))
             }
         }
     }
@@ -152,7 +154,7 @@ class EditHabitViewModel(
                 if (habit == null) {
                     _uiState.value = EditHabitUiState(
                         isLoading = false,
-                        loadError = "未找到该习惯"
+                        loadErrorResId = R.string.edit_habit_not_found
                     )
                     return@launch
                 }
@@ -169,7 +171,7 @@ class EditHabitViewModel(
 
                 _uiState.value = EditHabitUiState(
                     isLoading = false,
-                    loadError = "加载习惯失败，请稍后重试"
+                    loadErrorResId = R.string.edit_habit_load_failed
                 )
             }
         }

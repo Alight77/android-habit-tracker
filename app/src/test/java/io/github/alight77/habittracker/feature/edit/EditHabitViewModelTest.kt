@@ -1,5 +1,6 @@
 package io.github.alight77.habittracker.feature.edit
 
+import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.data.local.HabitDao
 import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.local.RecordDao
@@ -7,16 +8,16 @@ import io.github.alight77.habittracker.data.local.RecordEntity
 import io.github.alight77.habittracker.data.repository.HabitRepository
 import io.github.alight77.habittracker.domain.icon.IconKey
 import io.github.alight77.habittracker.testutil.MainDispatcherRule
-import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -61,6 +62,8 @@ class EditHabitViewModelTest {
             habitDao.updatedHabit
         )
         assertTrue(viewModel.uiState.value.navigateBackRequestId != null)
+        assertEquals(0, habitDao.insertCalls)
+        assertEquals(1, habitDao.updateCalls)
     }
 
     @Test
@@ -74,7 +77,66 @@ class EditHabitViewModelTest {
         advanceUntilIdle()
 
         assertFalse(viewModel.uiState.value.isLoading)
-        assertEquals("未找到该习惯", viewModel.uiState.value.loadError)
+        assertEquals(R.string.edit_habit_not_found, viewModel.uiState.value.loadErrorResId)
+    }
+
+    @Test
+    fun blankName_keepsDraftUntilInputChangesAndUsesSharedResource() = runTest {
+        val habitDao = EditableHabitDao(habit(id = 7, name = "阅读"))
+        val viewModel = EditHabitViewModel(
+            HabitRepository(habitDao, EmptyRecordDao()), 7, mainDispatcherRule.dispatcher
+        )
+        advanceUntilIdle()
+
+        viewModel.onNameChanged("   ")
+        viewModel.selectIcon(IconKey.WATER)
+        viewModel.decreaseTargetPerWeek()
+        viewModel.saveHabit()
+
+        assertEquals(R.string.habit_name_required, viewModel.uiState.value.nameErrorResId)
+        assertEquals("   ", viewModel.uiState.value.name)
+        assertEquals(IconKey.WATER, viewModel.uiState.value.iconKey)
+        assertEquals(2, viewModel.uiState.value.targetPerWeek)
+        assertEquals(0, habitDao.updateCalls)
+
+        viewModel.onNameChanged("晨读")
+        assertEquals(null, viewModel.uiState.value.nameErrorResId)
+    }
+
+    @Test
+    fun loadFailure_retryFetchesSameHabitAndClearsError() = runTest {
+        val habitDao = EditableHabitDao(habit(id = 7, name = "阅读"), failOnLoad = true)
+        val viewModel = EditHabitViewModel(
+            HabitRepository(habitDao, EmptyRecordDao()), 7, mainDispatcherRule.dispatcher
+        )
+        advanceUntilIdle()
+
+        assertEquals(R.string.edit_habit_load_failed, viewModel.uiState.value.loadErrorResId)
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(listOf(7), habitDao.requestedIds)
+
+        habitDao.failOnLoad = false
+        viewModel.retry()
+        advanceUntilIdle()
+
+        assertEquals(listOf(7, 7), habitDao.requestedIds)
+        assertEquals(null, viewModel.uiState.value.loadErrorResId)
+        assertEquals("阅读", viewModel.uiState.value.name)
+        assertEquals(3, viewModel.uiState.value.targetPerWeek)
+        assertFalse(viewModel.uiState.value.isLoading)
+    }
+
+    @Test
+    fun cancelledLoadDoesNotBecomeOrdinaryLoadFailure() = runTest {
+        val habitDao = EditableHabitDao(habit(id = 7, name = "阅读"), cancelOnLoad = true)
+        val viewModel = EditHabitViewModel(
+            HabitRepository(habitDao, EmptyRecordDao()), 7, mainDispatcherRule.dispatcher
+        )
+        advanceUntilIdle()
+
+        assertEquals(listOf(7), habitDao.requestedIds)
+        assertTrue(viewModel.uiState.value.isLoading)
+        assertEquals(null, viewModel.uiState.value.loadErrorResId)
     }
 
     @Test
@@ -83,22 +145,90 @@ class EditHabitViewModelTest {
         val viewModel = EditHabitViewModel(
             repository = HabitRepository(habitDao, EmptyRecordDao()),
             habitId = 7,
-            dispatcher = mainDispatcherRule.dispatcher
+            dispatcher = StandardTestDispatcher(testScheduler)
         )
         advanceUntilIdle()
-        val event = async(start = CoroutineStart.UNDISPATCHED) {
-            withTimeout(2_000L) { viewModel.events.take(1).toList().single() }
+        val events = mutableListOf<EditHabitUiEvent>()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.events.toList(events)
         }
 
         viewModel.onNameChanged("晨读")
         viewModel.selectIcon(IconKey.WATER)
+        viewModel.saveHabit()
         viewModel.saveHabit()
         advanceUntilIdle()
 
         assertEquals("晨读", viewModel.uiState.value.name)
         assertEquals(IconKey.WATER, viewModel.uiState.value.iconKey)
         assertFalse(viewModel.uiState.value.isSaving)
-        assertEquals(EditHabitUiEvent.SaveFailed("保存失败，请稍后重试"), event.await())
+        assertEquals(listOf(EditHabitUiEvent.SaveFailed(R.string.habit_save_failed)), events)
+        assertEquals(1, habitDao.updateCalls)
+        collector.cancel()
+    }
+
+    @Test
+    fun successfulSaveEmitsNoFailureEventAndUpdatesExistingHabitOnce() = runTest {
+        val habitDao = EditableHabitDao(habit(id = 7, name = "阅读"))
+        val viewModel = EditHabitViewModel(
+            HabitRepository(habitDao, EmptyRecordDao()), 7, mainDispatcherRule.dispatcher
+        )
+        advanceUntilIdle()
+        val events = mutableListOf<EditHabitUiEvent>()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.events.toList(events)
+        }
+
+        viewModel.onNameChanged("晨读")
+        viewModel.saveHabit()
+        advanceUntilIdle()
+
+        assertTrue(events.isEmpty())
+        assertEquals(1, habitDao.updateCalls)
+        assertEquals(0, habitDao.insertCalls)
+        assertEquals("晨读", habitDao.updatedHabit?.name)
+        assertTrue(viewModel.uiState.value.navigateBackRequestId != null)
+        collector.cancel()
+    }
+
+    @Test
+    fun repeatedSaveWhileSavingOnlyUpdatesOnce() = runTest {
+        val habitDao = EditableHabitDao(habit(id = 7, name = "阅读"))
+        val viewModel = EditHabitViewModel(
+            HabitRepository(habitDao, EmptyRecordDao()), 7, StandardTestDispatcher(testScheduler)
+        )
+        advanceUntilIdle()
+
+        viewModel.onNameChanged("晨读")
+        viewModel.saveHabit()
+        assertTrue(viewModel.uiState.value.isSaving)
+        viewModel.saveHabit()
+        advanceUntilIdle()
+
+        assertEquals(1, habitDao.updateCalls)
+        assertEquals(0, habitDao.insertCalls)
+    }
+
+    @Test
+    fun cancelledSaveDoesNotBecomeFailureEvent() = runTest {
+        val habitDao = EditableHabitDao(habit(id = 7, name = "阅读"), cancelOnUpdate = true)
+        val viewModel = EditHabitViewModel(
+            HabitRepository(habitDao, EmptyRecordDao()), 7, mainDispatcherRule.dispatcher
+        )
+        advanceUntilIdle()
+        val events = mutableListOf<EditHabitUiEvent>()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.events.toList(events)
+        }
+
+        viewModel.onNameChanged("晨读")
+        viewModel.saveHabit()
+        advanceUntilIdle()
+
+        assertTrue(events.isEmpty())
+        assertEquals("晨读", viewModel.uiState.value.name)
+        assertEquals(null, viewModel.uiState.value.navigateBackRequestId)
+        collector.cancel()
     }
 
     @Test
@@ -172,15 +302,28 @@ class EditHabitViewModelTest {
 
     private class EditableHabitDao(
         private var habit: HabitEntity?,
-        private val failOnUpdate: Boolean = false
+        private val failOnUpdate: Boolean = false,
+        var failOnLoad: Boolean = false,
+        private val cancelOnUpdate: Boolean = false,
+        private val cancelOnLoad: Boolean = false
     ) : HabitDao {
         var updatedHabit: HabitEntity? = null
+        var updateCalls: Int = 0
+        var insertCalls: Int = 0
+        val requestedIds = mutableListOf<Int>()
 
-        override suspend fun insertHabit(habit: HabitEntity) = Unit
+        override suspend fun insertHabit(habit: HabitEntity) { insertCalls++ }
         override suspend fun deleteHabit(habit: HabitEntity) = Unit
-        override suspend fun getHabitById(habitId: Int): HabitEntity? = habit?.takeIf { it.id == habitId }
+        override suspend fun getHabitById(habitId: Int): HabitEntity? {
+            requestedIds += habitId
+            if (cancelOnLoad) throw CancellationException("load cancelled")
+            if (failOnLoad) error("database unavailable")
+            return habit?.takeIf { it.id == habitId }
+        }
 
         override suspend fun updateHabit(habit: HabitEntity) {
+            updateCalls++
+            if (cancelOnUpdate) throw CancellationException("save cancelled")
             if (failOnUpdate) error("database unavailable")
             this.habit = habit
             updatedHabit = habit

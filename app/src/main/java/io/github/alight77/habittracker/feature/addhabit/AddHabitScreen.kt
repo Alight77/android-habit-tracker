@@ -12,8 +12,10 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -38,6 +40,7 @@ fun AddHabitScreen(
     val showIconPicker = remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val currentContext = rememberUpdatedState(LocalContext.current)
     val iconDefinition = HabitIconCatalog.resolveForDisplay(uiState.effectiveIconKey).definition
     val iconStatus = stringResource(
         if (uiState.manualIconKey == null) R.string.habit_icon_auto_status else R.string.habit_icon_manual_status,
@@ -59,7 +62,10 @@ fun AddHabitScreen(
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.events.collect { event ->
                 when (event) {
-                    is AddHabitUiEvent.SaveFailed -> snackbarHostState.showSnackbar(event.message)
+                    // 收集器跨重组继续运行；消费事件时使用当前界面语言对应的 Context。
+                    is AddHabitUiEvent.SaveFailed -> snackbarHostState.showSnackbar(
+                        currentContext.value.getString(event.messageResId)
+                    )
                 }
             }
         }
@@ -98,7 +104,7 @@ fun AddHabitScreen(
             HabitFormContent(
                 name = uiState.name,
                 targetPerWeek = uiState.targetPerWeek,
-                nameError = uiState.nameError,
+                nameError = uiState.nameErrorResId?.let { stringResource(it) },
                 isSaving = uiState.isSaving,
                 onNameChanged = viewModel::onNameChanged,
                 onDecreaseTarget = viewModel::decreaseTargetPerWeek,

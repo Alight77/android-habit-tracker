@@ -1,7 +1,9 @@
 package io.github.alight77.habittracker.feature.addhabit
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.repository.HabitRepository
 import io.github.alight77.habittracker.domain.icon.HabitIconMatcher
@@ -24,7 +26,7 @@ data class AddHabitUiState(
     val name: String = "",
     val manualIconKey: IconKey? = null,
     val targetPerWeek: Int = MAX_TARGET_PER_WEEK,
-    val nameError: String? = null,
+    @param:StringRes val nameErrorResId: Int? = null,
     val isSaving: Boolean = false,
     val navigateBackRequestId: Long? = null
 ) {
@@ -32,7 +34,7 @@ data class AddHabitUiState(
 }
 
 sealed interface AddHabitUiEvent {
-    data class SaveFailed(val message: String) : AddHabitUiEvent
+    data class SaveFailed(@param:StringRes val messageResId: Int) : AddHabitUiEvent
 }
 
 class AddHabitViewModel(
@@ -49,7 +51,7 @@ class AddHabitViewModel(
 
     fun onNameChanged(name: String) {
         _uiState.update { state ->
-            if (state.isSaving) state else state.copy(name = name, nameError = null)
+            if (state.isSaving) state else state.copy(name = name, nameErrorResId = null)
         }
     }
 
@@ -83,7 +85,7 @@ class AddHabitViewModel(
 
         if (normalizedName.isEmpty()) {
             _uiState.update { currentState ->
-                currentState.copy(nameError = "请输入习惯名称")
+                currentState.copy(nameErrorResId = R.string.habit_name_required)
             }
             return
         }
@@ -91,7 +93,7 @@ class AddHabitViewModel(
         if (state.isSaving) return
 
         _uiState.update { currentState ->
-            currentState.copy(isSaving = true, nameError = null)
+            currentState.copy(isSaving = true, nameErrorResId = null)
         }
 
         viewModelScope.launch(dispatcher) {
@@ -115,7 +117,7 @@ class AddHabitViewModel(
                 _uiState.update { currentState ->
                     currentState.copy(isSaving = false)
                 }
-                _events.emit(AddHabitUiEvent.SaveFailed("保存失败，请稍后重试"))
+                _events.emit(AddHabitUiEvent.SaveFailed(R.string.habit_save_failed))
             }
         }
     }

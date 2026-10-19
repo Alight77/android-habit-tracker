@@ -16,10 +16,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -43,6 +45,7 @@ fun EditHabitScreen(
     val showIconPicker = remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val currentContext = rememberUpdatedState(LocalContext.current)
     val resolvedIcon = HabitIconCatalog.resolveForDisplay(uiState.iconKey)
     val iconStatus = if (resolvedIcon.originalKey != resolvedIcon.definition.key) {
         stringResource(R.string.habit_icon_unknown_status)
@@ -50,7 +53,7 @@ fun EditHabitScreen(
         stringResource(R.string.habit_icon_saved_status, stringResource(resolvedIcon.definition.labelRes))
     }
 
-    if (showIconPicker.value && !uiState.isLoading && !uiState.isSaving && uiState.loadError == null) {
+    if (showIconPicker.value && !uiState.isLoading && !uiState.isSaving && uiState.loadErrorResId == null) {
         HabitIconPicker(
             selectedKey = uiState.iconKey,
             onSelect = { key ->
@@ -65,7 +68,10 @@ fun EditHabitScreen(
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.events.collect { event ->
                 when (event) {
-                    is EditHabitUiEvent.SaveFailed -> snackbarHostState.showSnackbar(event.message)
+                    // 收集器跨重组继续运行；事件消费时读取当前界面语言的资源。
+                    is EditHabitUiEvent.SaveFailed -> snackbarHostState.showSnackbar(
+                        currentContext.value.getString(event.messageResId)
+                    )
                 }
             }
         }
@@ -96,7 +102,7 @@ fun EditHabitScreen(
                 }
             }
 
-            uiState.loadError != null -> {
+            uiState.loadErrorResId != null -> {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -105,7 +111,7 @@ fun EditHabitScreen(
                         .padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(uiState.loadError)
+                    Text(stringResource(uiState.loadErrorResId))
                     Button(onClick = viewModel::retry) {
                         Text(stringResource(R.string.retry))
                     }
@@ -132,7 +138,7 @@ fun EditHabitScreen(
                     HabitFormContent(
                         name = uiState.name,
                         targetPerWeek = uiState.targetPerWeek,
-                        nameError = uiState.nameError,
+                        nameError = uiState.nameErrorResId?.let { stringResource(it) },
                         isSaving = uiState.isSaving,
                         onNameChanged = viewModel::onNameChanged,
                         onDecreaseTarget = viewModel::decreaseTargetPerWeek,

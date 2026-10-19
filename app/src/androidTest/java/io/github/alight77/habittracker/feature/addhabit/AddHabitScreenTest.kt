@@ -1,10 +1,13 @@
 package io.github.alight77.habittracker.feature.addhabit
 
+import android.content.res.Configuration
+import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.test.assertIsDisplayed
@@ -13,6 +16,7 @@ import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -21,14 +25,26 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Density
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -36,10 +52,13 @@ import io.github.alight77.habittracker.data.local.HabitDatabase
 import io.github.alight77.habittracker.data.local.HabitDao
 import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.repository.HabitRepository
+import io.github.alight77.habittracker.R
+import io.github.alight77.habittracker.ui.theme.HabitTrackerTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -47,6 +66,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import java.util.Locale
+import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class AddHabitScreenTest {
@@ -146,6 +167,39 @@ class AddHabitScreenTest {
         composeRule.onNodeWithText("保存习惯").performScrollTo().performClick()
 
         composeRule.onNodeWithText("请输入习惯名称").assertIsDisplayed()
+    }
+
+    @Test
+    fun existingNameErrorFollowsUiConfigurationWithoutRevalidating() {
+        val stableViewModel = viewModel()
+        stableViewModel.saveHabit()
+        val errorState = stableViewModel.uiState.value
+        assertEquals(R.string.habit_name_required, errorState.nameErrorResId)
+        var locale by mutableStateOf(Locale.SIMPLIFIED_CHINESE)
+        composeRule.setContent {
+            val configuration = Configuration(composeRule.activity.resources.configuration).apply {
+                setLocale(locale)
+            }
+            CompositionLocalProvider(
+                LocalContext provides composeRule.activity.createConfigurationContext(configuration),
+                LocalConfiguration provides configuration
+            ) {
+                AddHabitScreen(stableViewModel, onBackClick = {})
+            }
+        }
+
+        listOf(
+            "zh-CN" to "请输入习惯名称",
+            "en-US" to "Please enter a habit name.",
+            "en-GB" to "Please enter a habit name.",
+            "ja-JP" to "Please enter a habit name.",
+            "fr-FR" to "Please enter a habit name."
+        ).forEach { (tag, expected) ->
+            composeRule.runOnUiThread { locale = Locale.forLanguageTag(tag) }
+            composeRule.onNodeWithText(expected).performScrollTo().assertIsDisplayed()
+            assertSame(errorState, stableViewModel.uiState.value)
+        }
+        assertTrue(runBlocking { database.habitDao().getAllHabits().first().isEmpty() })
     }
 
     @Test
@@ -253,6 +307,128 @@ class AddHabitScreenTest {
         // 失败态测试结束前收起键盘，避免输入法状态遗留到下一个 Activity 用例。
         composeRule.runOnUiThread { keyboardController.get().hide() }
         composeRule.waitUntil(timeoutMillis = 5_000L) { imeBottomPx.get() == 0 }
+    }
+
+    @Test
+    fun saveFailureSnackbarUsesLocaleWhenEachEventIsConsumed() {
+        val failingHabitDao = object : HabitDao by database.habitDao() {
+            override suspend fun insertHabit(habit: HabitEntity) {
+                error("database unavailable")
+            }
+        }
+        val stableViewModel = AddHabitViewModel(
+            HabitRepository(failingHabitDao, database.recordDao())
+        )
+        stableViewModel.onNameChanged("Read")
+        var locale by mutableStateOf(Locale.SIMPLIFIED_CHINESE)
+        composeRule.setContent {
+            val configuration = Configuration(composeRule.activity.resources.configuration).apply {
+                setLocale(locale)
+            }
+            CompositionLocalProvider(
+                LocalContext provides composeRule.activity.createConfigurationContext(configuration),
+                LocalConfiguration provides configuration
+            ) {
+                AddHabitScreen(stableViewModel, onBackClick = {})
+            }
+        }
+
+        listOf(
+            "zh-CN" to "保存失败，请稍后重试",
+            "en-US" to "Couldn’t save habit. Please try again.",
+            "en-GB" to "Couldn’t save habit. Please try again.",
+            "ja-JP" to "Couldn’t save habit. Please try again.",
+            "fr-FR" to "Couldn’t save habit. Please try again."
+        ).forEachIndexed { index, (tag, expected) ->
+            composeRule.runOnUiThread { locale = Locale.forLanguageTag(tag) }
+            val saveLabel = if (tag == "zh-CN") "保存习惯" else "Save habit"
+            composeRule.onNodeWithText(saveLabel).performScrollTo().performClick()
+            composeRule.waitUntil(timeoutMillis = 5_000L) {
+                composeRule.onAllNodesWithText(expected).fetchSemanticsNodes().isNotEmpty()
+            }
+            composeRule.onNodeWithText(expected).assertIsDisplayed()
+            composeRule.onNodeWithText(saveLabel).performScrollTo().assertIsDisplayed()
+            assertEquals("Read", stableViewModel.uiState.value.name)
+            assertTrue(runBlocking { database.habitDao().getAllHabits().first().isEmpty() })
+            if (index < 4) {
+                composeRule.waitUntil(timeoutMillis = 10_000L) {
+                    composeRule.onAllNodesWithText(expected).fetchSemanticsNodes().isEmpty()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun localizedValidationAndSaveFit320dpAtNormalAndDoubleFontScale() {
+        val stableViewModel = viewModel()
+        stableViewModel.saveHabit()
+        var locale by mutableStateOf(Locale.US)
+        var fontScale by mutableStateOf(1f)
+        composeRule.setContent {
+            val configuration = Configuration(composeRule.activity.resources.configuration).apply {
+                setLocale(locale)
+            }
+            val deviceDensity = LocalDensity.current.density
+            CompositionLocalProvider(
+                LocalContext provides composeRule.activity.createConfigurationContext(configuration),
+                LocalConfiguration provides configuration,
+                LocalDensity provides Density(deviceDensity, fontScale)
+            ) {
+                key(locale.toLanguageTag(), fontScale) {
+                    HabitTrackerTheme {
+                        Box(Modifier.width(320.dp).height(700.dp).testTag("narrowAddHabit")) {
+                            AddHabitScreen(stableViewModel, onBackClick = {})
+                        }
+                    }
+                }
+            }
+        }
+
+        data class VisualCase(val name: String, val locale: Locale, val scale: Float)
+        val cases = listOf(
+            VisualCase("en-320-100", Locale.US, 1f),
+            VisualCase("en-320-200", Locale.US, 2f),
+            VisualCase("zh-320-200", Locale.SIMPLIFIED_CHINESE, 2f)
+        )
+        val screenshotDir = File(composeRule.activity.getExternalFilesDir(null), "i18n-b272")
+        assertTrue(screenshotDir.exists() || screenshotDir.mkdirs())
+        cases.forEach { case ->
+            composeRule.runOnUiThread {
+                locale = case.locale
+                fontScale = case.scale
+            }
+            val errorLabel = if (case.locale.language == "zh") "请输入习惯名称"
+                else "Please enter a habit name."
+            val saveLabel = if (case.locale.language == "zh") "保存习惯" else "Save habit"
+            val host = composeRule.onNodeWithTag("narrowAddHabit").getUnclippedBoundsInRoot()
+            val error = composeRule.onNodeWithText(errorLabel)
+                .performScrollTo().assertIsDisplayed().getUnclippedBoundsInRoot()
+            assertTrue("${case.name}: error clipped horizontally",
+                error.left >= host.left && error.right <= host.right)
+            val topImage = composeRule.onNodeWithTag("narrowAddHabit").captureToImage()
+                .asAndroidBitmap()
+            File(screenshotDir, "${case.name}-error.png").outputStream().use { output ->
+                assertTrue(topImage.compress(Bitmap.CompressFormat.PNG, 100, output))
+            }
+            composeRule.onNodeWithTag("habit_name_input").performScrollTo().assertIsDisplayed()
+            composeRule.onNodeWithText(saveLabel).performScrollTo().assertIsDisplayed()
+            if (case.scale >= 2f) {
+                // 大字号下继续向上滚动，核对完整按钮而非仅露出文字上沿。
+                composeRule.onNodeWithTag("narrowAddHabit").performTouchInput {
+                    swipeUp(startY = bottom * 0.8f, endY = bottom * 0.35f)
+                }
+            }
+            val save = composeRule.onNodeWithText(saveLabel)
+                .assertIsDisplayed().getUnclippedBoundsInRoot()
+            assertTrue("${case.name}: save action outside 320dp viewport",
+                save.left >= host.left && save.right <= host.right &&
+                    save.top >= host.top && save.bottom <= host.bottom)
+            val saveImage = composeRule.onNodeWithTag("narrowAddHabit").captureToImage()
+                .asAndroidBitmap()
+            File(screenshotDir, "${case.name}-save.png").outputStream().use { output ->
+                assertTrue(saveImage.compress(Bitmap.CompressFormat.PNG, 100, output))
+            }
+        }
     }
 
     @Test

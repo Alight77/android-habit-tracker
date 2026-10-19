@@ -1,11 +1,13 @@
 package io.github.alight77.habittracker.feature.addhabit
 
+import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.data.local.HabitDao
 import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.local.RecordDao
 import io.github.alight77.habittracker.data.local.RecordEntity
 import io.github.alight77.habittracker.data.repository.HabitRepository
 import io.github.alight77.habittracker.domain.icon.IconKey
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -35,9 +37,12 @@ class AddHabitViewModelTest {
         viewModel.saveHabit()
         advanceUntilIdle()
 
-        assertEquals("请输入习惯名称", viewModel.uiState.value.nameError)
+        assertEquals(R.string.habit_name_required, viewModel.uiState.value.nameErrorResId)
         assertFalse(viewModel.uiState.value.isSaving)
         assertTrue(habitDao.insertedHabits.isEmpty())
+
+        viewModel.onNameChanged("阅读")
+        assertEquals(null, viewModel.uiState.value.nameErrorResId)
     }
 
     @Test
@@ -47,6 +52,10 @@ class AddHabitViewModelTest {
             repository = HabitRepository(habitDao, EmptyRecordDao()),
             dispatcher = StandardTestDispatcher(testScheduler)
         )
+        val events = mutableListOf<AddHabitUiEvent>()
+        val collectEvents = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.events.toList(events)
+        }
 
         viewModel.onNameChanged("  阅读  ")
         repeat(2) { viewModel.decreaseTargetPerWeek() }
@@ -56,12 +65,14 @@ class AddHabitViewModelTest {
         assertEquals("阅读", habitDao.insertedHabits.single().name)
         assertEquals(5, habitDao.insertedHabits.single().targetPerWeek)
         assertEquals("reading", habitDao.insertedHabits.single().iconKey)
+        assertTrue(events.isEmpty())
         val navigationRequestId = viewModel.uiState.value.navigateBackRequestId
         assertTrue(navigationRequestId != null)
 
         viewModel.onNavigateBackConsumed(navigationRequestId!!)
 
         assertEquals(AddHabitUiState(), viewModel.uiState.value)
+        collectEvents.cancel()
     }
 
     @Test
@@ -173,9 +184,35 @@ class AddHabitViewModelTest {
         assertEquals(IconKey.WATER, viewModel.uiState.value.manualIconKey)
         assertFalse(viewModel.uiState.value.isSaving)
         assertEquals(
-            listOf(AddHabitUiEvent.SaveFailed("保存失败，请稍后重试")),
+            listOf(AddHabitUiEvent.SaveFailed(R.string.habit_save_failed)),
             events
         )
+        collectEvents.cancel()
+    }
+
+    @Test
+    fun saveHabit_whenCancelled_doesNotEmitFailureEvent() = runTest {
+        val cancellingDao = object : HabitDao by RecordingHabitDao() {
+            override suspend fun insertHabit(habit: HabitEntity) {
+                throw CancellationException("save cancelled")
+            }
+        }
+        val viewModel = AddHabitViewModel(
+            repository = HabitRepository(cancellingDao, EmptyRecordDao()),
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
+        val events = mutableListOf<AddHabitUiEvent>()
+        val collectEvents = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.events.toList(events)
+        }
+
+        viewModel.onNameChanged("阅读")
+        viewModel.saveHabit()
+        advanceUntilIdle()
+
+        assertTrue(events.isEmpty())
+        assertEquals("阅读", viewModel.uiState.value.name)
+        assertEquals(null, viewModel.uiState.value.navigateBackRequestId)
         collectEvents.cancel()
     }
 

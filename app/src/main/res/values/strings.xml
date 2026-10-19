@@ -1,117 +1,146 @@
 <resources>
     <string name="app_name">HabitTracker</string>
+    <string name="ui_language_tag">en</string>
     <string name="dashboard_title">HabitTracker</string>
-    <string name="back">返回</string>
-    <string name="add_habit">新增习惯</string>
-    <string name="add_habit_intro_title">种下一个新习惯</string>
-    <string name="add_habit_guidance">从今天开始，遇见更好的自己。</string>
-    <string name="edit_habit">编辑习惯</string>
-    <string name="edit_habit_intro_title">持续让好习惯生长</string>
-    <string name="edit_habit_guidance">每一点坚持，都在让生活更好。</string>
-    <string name="habit_name">习惯名称</string>
-    <string name="habit_name_example">例如：阅读、运动、喝水</string>
-    <string name="habit_name_suggestions_title">试试这些名称</string>
+    <string name="back">Back</string>
+    <string name="add_habit">Add habit</string>
+    <string name="add_habit_intro_title">Start a new habit</string>
+    <string name="add_habit_guidance">Start today and grow into a better you.</string>
+    <string name="edit_habit">Edit habit</string>
+    <string name="edit_habit_intro_title">Keep your habit growing</string>
+    <string name="edit_habit_guidance">Every small effort makes life better.</string>
+    <string name="habit_name">Habit name</string>
+    <string name="habit_name_required">Please enter a habit name.</string>
+    <string name="habit_save_failed">Couldn’t save habit. Please try again.</string>
+    <string name="edit_habit_not_found">Habit not found.</string>
+    <string name="edit_habit_load_failed">Couldn’t load habit. Please try again.</string>
+    <string name="habit_name_example">e.g., Read, exercise, drink water</string>
+    <string name="habit_name_suggestions_title">Try one of these</string>
     <string-array name="habit_name_suggestions">
-        <item>阅读</item>
-        <item>喝水</item>
-        <item>运动</item>
-        <item>早睡</item>
+        <item>Read</item>
+        <item>Drink water</item>
+        <item>Exercise</item>
+        <item>Go to bed early</item>
     </string-array>
-    <string name="habit_preview_title">习惯预览</string>
-    <string name="habit_preview_badge">效果预览</string>
-    <string name="habit_preview_empty_name">待命名习惯</string>
-    <string name="habit_preview_icon_description">预览图标：%1$s</string>
-    <string name="habit_icon_auto_status">图标 · 自动推荐：%1$s</string>
-    <string name="habit_icon_manual_status">图标 · 已选择：%1$s</string>
-    <string name="habit_icon_saved_status">图标 · 当前：%1$s</string>
-    <string name="habit_icon_unknown_status">图标 · 原图标暂不可用，预览显示通用</string>
-    <string name="habit_icon_restore_auto">恢复自动推荐</string>
-    <string name="habit_icon_recommend_now">按名称推荐</string>
-    <string name="habit_icon_picker_title">选择习惯图标</string>
-    <string name="habit_icon_selected">已选择</string>
-    <string name="habit_icon_general">通用</string>
-    <string name="habit_icon_reading">阅读</string>
-    <string name="habit_icon_exercise">运动</string>
-    <string name="habit_icon_water">饮水</string>
-    <string name="habit_icon_sleep">睡眠</string>
-    <string name="habit_icon_study">学习</string>
-    <string name="habit_icon_mindfulness">正念</string>
-    <string name="habit_icon_health">健康</string>
-    <string name="habit_icon_nutrition">饮食</string>
-    <string name="habit_icon_clean">清洁</string>
-    <string name="weekly_goal">每周目标次数</string>
-    <string name="weekly_goal_value">%1$d 次 / 周</string>
-    <string name="weekly_plan_flexible">每周计划 %1$d 次，可以灵活安排时间。</string>
-    <string name="weekly_plan_every_day">每周计划 7 次，目标是每天一次。</string>
-    <string name="decrease_weekly_goal">减少每周目标次数</string>
-    <string name="increase_weekly_goal">增加每周目标次数</string>
-    <string name="save_habit">保存习惯</string>
-    <string name="save_changes">保存修改</string>
-    <string name="saving">保存中…</string>
-    <string name="retry">重试</string>
-    <string name="statistics">统计</string>
-    <string name="privacy_policy">隐私政策</string>
-    <string name="privacy_policy_open_failed">无法打开隐私政策，请检查设备上的浏览器</string>
-    <string name="nav_today">今日</string>
-    <string name="stats_page_title">成长记录</string>
-    <string name="loading">加载中…</string>
-    <string name="start_with_habit">从一个小习惯开始</string>
-    <string name="dashboard_empty_guidance">点＋创建习惯</string>
-    <string name="stats_empty_guidance">切换到今日，创建第一个习惯</string>
+    <string name="habit_preview_title">Habit preview</string>
+    <string name="habit_preview_badge">Live preview</string>
+    <string name="habit_preview_empty_name">Unnamed habit</string>
+    <string name="habit_preview_icon_description">Preview icon: %1$s</string>
+    <string name="habit_icon_auto_status">Icon · Suggested: %1$s</string>
+    <string name="habit_icon_manual_status">Icon · Selected: %1$s</string>
+    <string name="habit_icon_saved_status">Icon · Current: %1$s</string>
+    <string name="habit_icon_unknown_status">Icon · Original icon unavailable; showing the generic icon</string>
+    <string name="habit_icon_restore_auto">Use automatic icon suggestion</string>
+    <string name="habit_icon_recommend_now">Suggest icon based on name</string>
+    <string name="habit_icon_picker_title">Choose a habit icon</string>
+    <string name="habit_icon_selected">Selected</string>
+    <string name="habit_icon_general">General</string>
+    <string name="habit_icon_reading">Reading</string>
+    <string name="habit_icon_exercise">Exercise</string>
+    <string name="habit_icon_water">Water</string>
+    <string name="habit_icon_sleep">Sleep</string>
+    <string name="habit_icon_study">Study</string>
+    <string name="habit_icon_mindfulness">Mindfulness</string>
+    <string name="habit_icon_health">Health</string>
+    <string name="habit_icon_nutrition">Nutrition</string>
+    <string name="habit_icon_clean">Cleaning</string>
+    <string name="weekly_goal">Weekly goal</string>
+    <string name="weekly_goal_value">%1$d per week</string>
+    <string name="weekly_plan_flexible">Your weekly goal is %1$d. Choose the days that work for you.</string>
+    <string name="weekly_plan_every_day">A goal of 7 per week means checking in every day.</string>
+    <string name="decrease_weekly_goal">Decrease weekly goal</string>
+    <string name="increase_weekly_goal">Increase weekly goal</string>
+    <string name="save_habit">Save habit</string>
+    <string name="save_changes">Save changes</string>
+    <string name="saving">Saving…</string>
+    <string name="retry">Retry</string>
+    <string name="statistics">Statistics</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="privacy_policy_open_failed">Cannot open the Privacy Policy. Check the browser on this device.</string>
+    <string name="nav_today">Today</string>
+    <string name="stats_page_title">Growth Record</string>
+    <string name="loading">Loading…</string>
+    <string name="start_with_habit">Start with one small habit</string>
+    <string name="dashboard_empty_guidance">Tap + to create a habit</string>
+    <string name="dashboard_load_failed">Couldn’t load habit data. Please try again.</string>
+    <string name="check_in_date_changed">The date has changed. Please try again.</string>
+    <string name="habit_delete_success">Deleted the habit and its check-in history from this device.</string>
+    <string name="habit_delete_failed">Couldn’t delete habit. Please try again.</string>
+    <string name="check_in_persist_failed">Couldn’t save check-in. Please try again.</string>
+    <string name="check_in_convergence_timeout">Check-in sync timed out. Please try again.</string>
+    <string name="check_in_cancelled">Check-in was interrupted. Please try again.</string>
+    <string name="check_in_habit_not_found">Habit not found or already deleted.</string>
+    <string name="check_in_conflict">Check-in conflict. Please try again.</string>
+    <string name="stats_empty_guidance">Go to Today to create your first habit</string>
+    <string name="stats_load_failed">Failed to load statistics. Please try again.</string>
     <string-array name="dashboard_daily_quotes">
-        <item>积累微小的坚持，\n就是创造更好的自己。</item>
-        <item>把今天过好，\n就是最好的开始。</item>
-        <item>微小的坚持，\n也在慢慢生根。</item>
-        <item>不必着急，\n按自己的节奏向前。</item>
-        <item>每一次认真，\n都在为明天积蓄力量。</item>
-        <item>一点一点向前，\n日子会有新的模样。</item>
-        <item>好的改变，\n常从平凡的一天开始。</item>
-        <item>走得慢一些，\n也能走向想去的地方。</item>
-        <item>把小事做好，\n成长就藏在其中。</item>
-        <item>今天的努力，\n会成为明天的底气。</item>
-        <item>愿意再次开始，\n本身就是一种勇气。</item>
-        <item>不用追赶谁，\n先走好自己的每一步。</item>
-        <item>给自己一点时间，\n改变会慢慢发生。</item>
-        <item>把想做的事，\n放进今天的行动里。</item>
-        <item>有些成长很安静，\n却一直在发生。</item>
-        <item>重复的小事，\n正在悄悄改变日常。</item>
-        <item>认真过好今天，\n是送给自己的礼物。</item>
-        <item>让习惯慢慢生长，\n也让自己慢慢变好。</item>
+        <item>Small, consistent actions\nhelp you grow.</item>
+        <item>Make today count.\nThat’s how progress begins.</item>
+        <item>Small, steady steps\nhelp new habits take root.</item>
+        <item>No need to rush.\nMove at your own pace.</item>
+        <item>Every sincere effort today\nbuilds strength for tomorrow.</item>
+        <item>Step by step,\nyour days begin to change.</item>
+        <item>Good changes often start\nwith an ordinary day.</item>
+        <item>Even at a slower pace,\nyou can reach where you want to go.</item>
+        <item>Do the small things well,\nand growth will follow.</item>
+        <item>The effort you make today\nwill support you tomorrow.</item>
+        <item>Starting again\nis an act of courage.</item>
+        <item>No need to keep up with anyone.\nTake your own next step.</item>
+        <item>Give yourself time.\nChange happens little by little.</item>
+        <item>Turn what you hope to do\ninto an action today.</item>
+        <item>Some growth is quiet,\nbut it is still happening.</item>
+        <item>Small repeated actions\nquietly reshape everyday life.</item>
+        <item>Living today with care\nis a gift to yourself.</item>
+        <item>Let your habits grow slowly,\nand let yourself grow with them.</item>
     </string-array>
-    <string name="check_in">打卡</string>
-    <string name="completed">已完成</string>
-    <string name="habit_check_content_description">%1$s：%2$s</string>
-    <string name="habit_check_incomplete_state">未完成</string>
-    <string name="habit_check_completed_state">已完成</string>
-    <string name="habit_more_actions">更多操作：%1$s</string>
-    <string name="edit">编辑</string>
-    <string name="delete">删除</string>
-    <string name="delete_habit">删除习惯</string>
-    <string name="delete_habit_confirmation">删除“%1$s”及其全部打卡记录？应用内无法撤销；如有系统备份，恢复后可能重现。</string>
-    <string name="confirm_permanent_delete">确认删除</string>
-    <string name="cancel">取消</string>
-    <string name="habit_target_summary">每周目标 %1$d 次</string>
-    <string name="habit_streak_summary">连续 %1$d 天</string>
-    <string name="habit_today_short">今</string>
-    <string name="habit_recent_days_description">近 7 天打卡记录：%1$s</string>
-    <string name="habit_day_checked">已打卡</string>
-    <string name="habit_day_unchecked">未打卡</string>
-    <string name="habit_day_today_unchecked">今日尚未打卡</string>
-    <string name="habit_day_before_creation">创建前</string>
-    <string name="stats_recent_seven_day_goal_rate">近 7 天目标达成率</string>
-    <string name="stats_goal_rate_accessibility">近 7 天目标达成率，%1$d%%</string>
-    <string name="stats_recent_seven_day_goal_rate_compact">近 7 天\n目标达成率</string>
-    <string name="stats_today_persistence">今天的坚持</string>
-    <string name="stats_today_count_accessibility">今天已完成 %1$d 个习惯，共 %2$d 个</string>
-    <string name="stats_recent_checkin_footprint">近 7 天打卡足迹</string>
-    <string name="stats_daily_completed_habits">每天完成打卡的习惯数</string>
-    <string name="stats_today_short">今天</string>
-    <string name="stats_daily_checkin_description">%1$s，%2$d 次打卡</string>
-    <string name="stats_history_metric_accessibility">%1$s，%2$d %3$s</string>
-    <string name="stats_effective_goal_note">按各习惯有效目标汇总</string>
-    <string name="stats_existing_habits_total_checkins">现有习惯累计打卡</string>
-    <string name="stats_single_habit_historical_longest">单项习惯历史最长连续</string>
-    <string name="stats_times">次</string>
-    <string name="stats_days">天</string>
-    <string name="stats_hero_motto">每一次坚持，\n都在留下印记。</string>
+    <string name="check_in">Check in</string>
+    <string name="completed">Completed</string>
+    <string name="habit_check_content_description">%1$s: %2$s</string>
+    <string name="habit_check_incomplete_state">Not completed</string>
+    <string name="habit_check_completed_state">Completed</string>
+    <string name="habit_more_actions">More actions for %1$s</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+    <string name="delete_habit">Delete habit</string>
+    <string name="delete_habit_confirmation">Delete “%1$s” and all its check-in records? This cannot be undone in the app. If a system backup exists, restoring it may bring the habit and records back.</string>
+    <string name="confirm_permanent_delete">Confirm delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="habit_target_summary">Weekly goal: %1$d</string>
+    <string name="habit_streak_summary">%1$d-day streak</string>
+    <string name="habit_today_short">Today</string>
+    <string name="habit_recent_days_description">Check-ins over the past 7 days: %1$s</string>
+    <string name="habit_day_checked">Checked in</string>
+    <string name="habit_day_unchecked">Not checked in</string>
+    <string name="habit_day_today_unchecked">Not checked in today</string>
+    <string name="habit_day_before_creation">Before creation</string>
+    <string-array name="habit_weekday_short">
+        <item>Mo</item>
+        <item>Tu</item>
+        <item>We</item>
+        <item>Th</item>
+        <item>Fr</item>
+        <item>Sa</item>
+        <item>Su</item>
+    </string-array>
+    <string name="habit_recent_day_accessibility">%2$s, %1$s: %3$s</string>
+    <string name="habit_recent_day_today_accessibility">%2$s, %1$s (today): %3$s</string>
+    <string name="stats_recent_seven_day_goal_rate">7-day goal completion rate</string>
+    <string name="stats_goal_rate_accessibility">7-day goal completion rate: %1$d%%</string>
+    <string name="stats_recent_seven_day_goal_rate_compact">7-day goal\ncompletion rate</string>
+    <string name="stats_today_persistence">Your progress today</string>
+    <string name="stats_today_count_accessibility">Habits completed today: %1$d of %2$d</string>
+    <string name="stats_recent_checkin_footprint">Check-in history: last 7 days</string>
+    <string name="stats_daily_completed_habits">Habits completed each day</string>
+    <string name="stats_today_short">Today</string>
+    <string name="stats_daily_checkin_description">%2$s, %1$s. Check-ins: %3$d</string>
+    <string name="stats_daily_checkin_today_description">Today, %2$s, %1$s. Check-ins: %3$d</string>
+    <string name="stats_history_metric_accessibility">%1$s: %2$d %3$s</string>
+    <string name="stats_effective_goal_note">Based on the applicable goal for each habit</string>
+    <string name="stats_existing_habits_total_checkins">Total check-ins for current habits</string>
+    <string name="stats_single_habit_historical_longest">Longest streak for a single habit</string>
+    <string name="stats_check_in_singular">check-in</string>
+    <string name="stats_times">check-ins</string>
+    <string name="stats_day_singular">day</string>
+    <string name="stats_days">days</string>
+    <string name="stats_hero_motto">Every time you show up,\nyou leave a mark.</string>
 </resources>
