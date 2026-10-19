@@ -132,7 +132,7 @@ fun StatsContent(
                         StatsUiState.Loading -> LoadingStats(Modifier.heightIn(min = viewportHeight))
 
                         is StatsUiState.Error -> ErrorStats(
-                            message = uiState.message,
+                            message = stringResource(uiState.messageResId),
                             onRetry = onRetry,
                             modifier = Modifier.heightIn(min = viewportHeight)
                         )
@@ -226,7 +226,7 @@ fun StatsContentLoadingPreview() {
 fun StatsContentErrorPreview() {
     HabitTrackerTheme {
         StatsContent(
-            uiState = StatsUiState.Error("加载统计数据失败，请重试"),
+            uiState = StatsUiState.Error(R.string.stats_load_failed),
             onRetry = {}
         )
     }

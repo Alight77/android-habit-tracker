@@ -1,5 +1,7 @@
 package io.github.alight77.habittracker.feature.stats
 
+import io.github.alight77.habittracker.R
+import io.github.alight77.habittracker.data.local.HabitDao
 import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.local.RecordEntity
 import io.github.alight77.habittracker.testutil.MainDispatcherRule
@@ -7,10 +9,16 @@ import io.github.alight77.habittracker.testutil.TestHabitDao
 import io.github.alight77.habittracker.testutil.TestRecordDao
 import io.github.alight77.habittracker.testutil.ThrowOnceHabitDao
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -128,7 +136,7 @@ class StatsViewModelTest {
             .filterIsInstance<StatsUiState.Error>()
             .first()
 
-        assertEquals("加载统计数据失败，请重试", error.message)
+        assertEquals(StatsUiState.Error(R.string.stats_load_failed), error)
 
         viewModel.retry()
 
@@ -138,6 +146,40 @@ class StatsViewModelTest {
 
         assertEquals(1, success.summary.totalHabits)
         assertEquals(2, habitDao.subscriptionCount)
+    }
+
+    @Test
+    fun repeatedFailuresKeepStableErrorIdUntilRetrySucceeds() = runTest {
+        val habits = TestHabitDao(listOf(habit(id = 1, name = "阅读")))
+        var subscriptionCount = 0
+        val failingDao = object : HabitDao by habits {
+            override fun getAllHabits(): Flow<List<HabitEntity>> = flow {
+                subscriptionCount += 1
+                if (subscriptionCount <= 2) error("habit source unavailable")
+                emitAll(habits.getAllHabits())
+            }
+        }
+        val viewModel = StatsViewModel(
+            habitDao = failingDao,
+            recordDao = TestRecordDao(emptyList()),
+            todaySource = flowOf(LocalDate.of(2026, 9, 19))
+        )
+        backgroundScope.launch { viewModel.uiState.collect() }
+
+        runCurrent()
+        assertEquals(StatsUiState.Error(R.string.stats_load_failed), viewModel.uiState.value)
+        assertEquals(1, subscriptionCount)
+
+        viewModel.retry()
+        runCurrent()
+        assertEquals(StatsUiState.Error(R.string.stats_load_failed), viewModel.uiState.value)
+        assertEquals(2, subscriptionCount)
+
+        viewModel.retry()
+        runCurrent()
+        val success = viewModel.uiState.value as StatsUiState.Success
+        assertEquals(1, success.summary.totalHabits)
+        assertEquals(3, subscriptionCount)
     }
 
     private fun habit(id: Int, name: String): HabitEntity {

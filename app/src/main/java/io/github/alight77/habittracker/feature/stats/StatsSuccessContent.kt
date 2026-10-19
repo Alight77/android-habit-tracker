@@ -27,7 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -45,6 +47,12 @@ import androidx.compose.ui.res.painterResource
 import io.github.alight77.habittracker.R
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+private val chineseChartDateFormatter = DateTimeFormatter.ofPattern("uuuu年M月d日", Locale.SIMPLIFIED_CHINESE)
+private val englishChartDateFormatter = DateTimeFormatter.ofPattern("MMMM d, uuuu", Locale.ENGLISH)
+private val chineseChartWeekdayFormatter = DateTimeFormatter.ofPattern("EEEE", Locale.SIMPLIFIED_CHINESE)
+private val englishChartWeekdayFormatter = DateTimeFormatter.ofPattern("EEEE", Locale.ENGLISH)
+private val chineseChartWeekdayShortFormatter = DateTimeFormatter.ofPattern("EEE", Locale.SIMPLIFIED_CHINESE)
 
 @Composable
 internal fun StatsSuccessContent(summary: StatsSummary, modifier: Modifier = Modifier) {
@@ -184,21 +192,32 @@ private fun RecentCheckInChart(summary: StatsSummary) {
     // 全零时缩短图表留白，避免空数据把历史指标挤出首屏。
     val chartHeight = if (days.all { it.completedHabits == 0 }) 64.dp else 90.dp
     val largeText = LocalDensity.current.fontScale >= 1.5f
-    val weekdayFormatter = DateTimeFormatter.ofPattern("EEE", Locale.SIMPLIFIED_CHINESE)
+    val context = LocalContext.current
+    val isChinese = stringResource(R.string.ui_language_tag) == "zh"
+    val weekdayLabels = context.resources.getStringArray(R.array.habit_weekday_short)
+    val dateFormatter = if (isChinese) chineseChartDateFormatter else englishChartDateFormatter
+    val weekdayFormatter = if (isChinese) chineseChartWeekdayFormatter else englishChartWeekdayFormatter
+    // 统计计算以同一个 today 生成七日日期；用最大日期识别今天，不依赖列表位置或柱值。
+    val today = days.maxOfOrNull { it.date }
     Row(
         modifier = Modifier.fillMaxWidth().then(
             if (largeText) Modifier.horizontalScroll(rememberScrollState()) else Modifier
         )
     ) {
-        days.forEachIndexed { index, day ->
-            val label = if (index == days.lastIndex) {
+        days.forEach { day ->
+            val isToday = day.date == today
+            val label = if (isChinese && isToday) {
                 stringResource(R.string.stats_today_short)
+            } else if (isChinese) {
+                day.date.format(chineseChartWeekdayShortFormatter)
             } else {
-                day.date.format(weekdayFormatter)
+                weekdayLabels[day.date.dayOfWeek.value - 1]
             }
             val description = stringResource(
-                R.string.stats_daily_checkin_description,
-                label,
+                if (isToday) R.string.stats_daily_checkin_today_description
+                else R.string.stats_daily_checkin_description,
+                day.date.format(dateFormatter),
+                day.date.format(weekdayFormatter),
                 day.completedHabits
             )
             Column(
@@ -240,12 +259,21 @@ private fun RecentCheckInChart(summary: StatsSummary) {
                 Spacer(Modifier.height(9.dp))
                 Text(
                     text = label,
-                    color = if (index == days.lastIndex) colors.primary else colors.onSurfaceVariant,
+                    color = if (isToday) colors.primary else colors.onSurfaceVariant,
                     fontSize = 12.sp,
-                    fontWeight = if (index == days.lastIndex) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
                     textAlign = TextAlign.Center,
                     maxLines = 1
                 )
+                if (!isChinese && isToday) {
+                    Box(
+                        Modifier
+                            .padding(top = 2.dp)
+                            .size(4.dp)
+                            .background(colors.primary, CircleShape)
+                            .testTag("stats-chart-today-marker")
+                    )
+                }
             }
         }
     }
@@ -324,6 +352,13 @@ private fun GoalRateSection(summary: StatsSummary) {
 @Composable
 private fun HistoryMetrics(summary: StatsSummary) {
     val colors = MaterialTheme.colorScheme
+    // 默认英语资源也用于其他语言回退，单复数必须按实际数量选择，不能依赖设备语言的复数规则。
+    val checkInUnit = stringResource(
+        if (summary.totalDoneCount == 1) R.string.stats_check_in_singular else R.string.stats_times
+    )
+    val dayUnit = stringResource(
+        if (summary.longestStreak == 1) R.string.stats_day_singular else R.string.stats_days
+    )
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val stacked = maxWidth < 320.dp || LocalDensity.current.fontScale >= 1.5f
         if (stacked) {
@@ -331,14 +366,14 @@ private fun HistoryMetrics(summary: StatsSummary) {
                 HistoryMetric(
                     label = stringResource(R.string.stats_existing_habits_total_checkins),
                     value = summary.totalDoneCount,
-                    unit = stringResource(R.string.stats_times),
+                    unit = checkInUnit,
                     modifier = Modifier.fillMaxWidth()
                 )
                 HorizontalDivider(color = colors.outlineVariant)
                 HistoryMetric(
                     label = stringResource(R.string.stats_single_habit_historical_longest),
                     value = summary.longestStreak,
-                    unit = stringResource(R.string.stats_days),
+                    unit = dayUnit,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -350,14 +385,14 @@ private fun HistoryMetrics(summary: StatsSummary) {
                 HistoryMetric(
                     label = stringResource(R.string.stats_existing_habits_total_checkins),
                     value = summary.totalDoneCount,
-                    unit = stringResource(R.string.stats_times),
+                    unit = checkInUnit,
                     modifier = Modifier.weight(1f)
                 )
                 Box(Modifier.width(1.dp).height(88.dp).background(colors.outlineVariant))
                 HistoryMetric(
                     label = stringResource(R.string.stats_single_habit_historical_longest),
                     value = summary.longestStreak,
-                    unit = stringResource(R.string.stats_days),
+                    unit = dayUnit,
                     modifier = Modifier.weight(1f)
                 )
             }

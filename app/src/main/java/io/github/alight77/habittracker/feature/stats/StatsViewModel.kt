@@ -2,6 +2,7 @@ package io.github.alight77.habittracker.feature.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.data.local.HabitDao
 import io.github.alight77.habittracker.data.local.RecordDao
 import io.github.alight77.habittracker.core.time.systemTodayFlow
@@ -48,7 +49,7 @@ class StatsViewModel(
                 )
                 state
             }.catch {
-                emit(StatsUiState.Error("加载统计数据失败，请重试"))
+                emit(StatsUiState.Error(R.string.stats_load_failed))
             }
         }
         .stateIn(

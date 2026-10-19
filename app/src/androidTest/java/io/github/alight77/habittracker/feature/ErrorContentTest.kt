@@ -1,9 +1,12 @@
 package io.github.alight77.habittracker.feature
 
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -20,6 +23,7 @@ import io.github.alight77.habittracker.feature.dashboard.DashboardContent
 import io.github.alight77.habittracker.feature.dashboard.DashboardUiState
 import io.github.alight77.habittracker.feature.stats.StatsContent
 import io.github.alight77.habittracker.feature.stats.StatsUiState
+import io.github.alight77.habittracker.feature.stats.ErrorStats
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -57,7 +61,7 @@ class ErrorContentTest {
         val retryCount = AtomicInteger(0)
         composeRule.setContent {
             StatsContent(
-                uiState = StatsUiState.Error("加载统计数据失败，请重试"),
+                uiState = StatsUiState.Error(R.string.stats_load_failed),
                 onRetry = { retryCount.incrementAndGet() }
             )
         }
@@ -73,10 +77,11 @@ class ErrorContentTest {
         composeRule.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, 2f)) {
-                Box(Modifier.width(320.dp).height(240.dp)) {
-                    StatsContent(
-                        uiState = StatsUiState.Error("统计数据暂时无法读取，请检查本地数据状态后重试"),
-                        onRetry = { retryCount.incrementAndGet() }
+                Column(Modifier.width(320.dp).height(240.dp).verticalScroll(rememberScrollState())) {
+                    ErrorStats(
+                        message = "统计数据暂时无法读取，请检查本地数据状态后重试",
+                        onRetry = { retryCount.incrementAndGet() },
+                        modifier = Modifier.heightIn(min = 240.dp)
                     )
                 }
             }
