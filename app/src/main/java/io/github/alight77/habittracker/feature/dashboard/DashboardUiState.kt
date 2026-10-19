@@ -1,5 +1,6 @@
 package io.github.alight77.habittracker.feature.dashboard
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import io.github.alight77.habittracker.domain.icon.IconKey
 import java.time.LocalDate
@@ -15,7 +16,7 @@ sealed interface  DashboardUiState {
     ) : DashboardUiState
 
     data class Error(
-        val message: String
+        @param:StringRes val messageResId: Int
     ) : DashboardUiState
 }
 

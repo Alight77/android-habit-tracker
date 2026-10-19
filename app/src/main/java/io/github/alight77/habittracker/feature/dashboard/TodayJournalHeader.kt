@@ -24,7 +24,9 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -41,6 +43,8 @@ import java.util.TimeZone
 
 private val dateFormatter = DateTimeFormatter.ofPattern("M月d日", Locale.SIMPLIFIED_CHINESE)
 private val weekdayFormatter = DateTimeFormatter.ofPattern("E", Locale.SIMPLIFIED_CHINESE)
+private val englishDateFormatter = DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH)
+private val englishWeekdayFormatter = DateTimeFormatter.ofPattern("EEEE", Locale.ENGLISH)
 private val lunarMonths = listOf("正", "二", "三", "四", "五", "六", "七", "八", "九", "十", "冬", "腊")
 private val lunarDigits = listOf("一", "二", "三", "四", "五", "六", "七", "八", "九")
 
@@ -49,6 +53,14 @@ internal fun TodayJournalHeader(today: LocalDate, modifier: Modifier = Modifier)
     val colors = MaterialTheme.colorScheme
     val largeText = LocalDensity.current.fontScale >= 1.5f
     val isLight = colors.background.luminance() > 0.5f
+    // 语言标识与页面文案由同一套资源回退决定，避免日语等系统语言输出非英语日期。
+    val showChineseCalendar = stringResource(R.string.ui_language_tag) == "zh"
+    val dateText = if (showChineseCalendar) dateFormatter.format(today) else englishDateFormatter.format(today)
+    val weekdayText = if (showChineseCalendar) {
+        "${weekdayFormatter.format(today)} · ${formatLunarDate(today)}"
+    } else {
+        englishWeekdayFormatter.format(today)
+    }
 
     Column(
         modifier = modifier
@@ -57,7 +69,7 @@ internal fun TodayJournalHeader(today: LocalDate, modifier: Modifier = Modifier)
             .padding(top = if (largeText) 16.dp else 24.dp, bottom = 10.dp)
     ) {
         Text(
-            text = dateFormatter.format(today),
+            text = dateText,
             color = colors.onBackground,
             fontSize = if (largeText) 36.sp else 46.sp,
             lineHeight = if (largeText) 44.sp else 54.sp,
@@ -65,7 +77,7 @@ internal fun TodayJournalHeader(today: LocalDate, modifier: Modifier = Modifier)
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            text = "${weekdayFormatter.format(today)} · ${formatLunarDate(today)}",
+            text = weekdayText,
             color = colors.onBackground,
             fontSize = if (largeText) 15.sp else 17.sp,
             lineHeight = 24.sp
@@ -77,7 +89,8 @@ internal fun TodayJournalHeader(today: LocalDate, modifier: Modifier = Modifier)
             val compactPaper = narrow || fontScale > 1f
             val quotes = LocalContext.current.resources.getStringArray(R.array.dashboard_daily_quotes)
             val quote = quotes[dailyQuoteIndex(today, quotes.size)]
-            val displayedQuote = if (narrow && fontScale >= 1.75f) {
+            // 中文保留既有窄屏拆行；英语沿用资源换行并交给排版引擎按词折行。
+            val displayedQuote = if (showChineseCalendar && narrow && fontScale >= 1.75f) {
                 balanceQuoteForNarrowLargeText(quote)
             } else {
                 quote
@@ -89,6 +102,7 @@ internal fun TodayJournalHeader(today: LocalDate, modifier: Modifier = Modifier)
                     modifier = Modifier
                         .fillMaxWidth(if (compactPaper) 0.9f else 0.78f)
                         .aspectRatio(3f)
+                        .testTag("dailyQuoteContainer")
                 ) {
                     Image(
                         painter = painterResource(R.drawable.dashboard_quote_paper),
@@ -111,7 +125,7 @@ internal fun TodayJournalHeader(today: LocalDate, modifier: Modifier = Modifier)
                 Surface(
                     modifier = Modifier.fillMaxWidth(
                         if (largeText) 1f else if (fontScale >= 1.25f) 0.9f else 0.78f
-                    ),
+                    ).testTag("dailyQuoteContainer"),
                     shape = RoundedCornerShape(5.dp),
                     color = if (isLight) WarmPaperMiddle else colors.surface,
                     shadowElevation = if (isLight) 1.dp else 0.dp

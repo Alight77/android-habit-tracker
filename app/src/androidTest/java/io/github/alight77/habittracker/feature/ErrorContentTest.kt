@@ -15,6 +15,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.feature.dashboard.DashboardContent
 import io.github.alight77.habittracker.feature.dashboard.DashboardUiState
 import io.github.alight77.habittracker.feature.stats.StatsContent
@@ -36,7 +37,7 @@ class ErrorContentTest {
         val retryCount = AtomicInteger(0)
         composeRule.setContent {
             DashboardContent(
-                uiState = DashboardUiState.Error("加载习惯数据失败，请重试"),
+                uiState = DashboardUiState.Error(R.string.dashboard_load_failed),
                 onCheckClick = { _ -> },
                 onAddClick = {},
                 onEditClick = {},
@@ -45,6 +46,7 @@ class ErrorContentTest {
             )
         }
 
+        composeRule.onNodeWithText("加载习惯数据失败，请重试").assertIsDisplayed()
         composeRule.onNodeWithText("重试").performClick()
 
         assertEquals(1, retryCount.get())

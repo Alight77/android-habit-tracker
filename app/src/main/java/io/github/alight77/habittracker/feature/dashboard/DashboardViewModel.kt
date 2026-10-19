@@ -2,6 +2,7 @@ package io.github.alight77.habittracker.feature.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.core.time.systemTodayFlow
 import io.github.alight77.habittracker.data.local.HabitDao
 import io.github.alight77.habittracker.data.local.RecordDao
@@ -94,8 +95,8 @@ class DashboardViewModel(
     }
 
     private suspend fun emitFailureMessage(event: SetTodayHabitCheckedUseCase.DomainEvent) {
-        val message = dashboardMessageFor(event) ?: return
-        _events.emit(DashboardUiEvent.ShowMessage(message))
+        val messageResId = dashboardMessageFor(event) ?: return
+        _events.emit(DashboardUiEvent.ShowResourceMessage(messageResId))
     }
 
     private fun applyOptimisticEvent(
@@ -158,7 +159,7 @@ class DashboardViewModel(
         // 日期流可能先于 UI StateFlow 更新；必须核对生成卡片状态的日期，再读取点击基线。
         if (today != todayFlow.value || (displayedState != null && displayedState.today != today)) {
             requestTodayRefresh()
-            _events.tryEmit(DashboardUiEvent.ShowMessage("日期已更新，请重新操作"))
+            _events.tryEmit(DashboardUiEvent.ShowResourceMessage(R.string.check_in_date_changed))
             return
         }
 
@@ -193,11 +194,11 @@ class DashboardViewModel(
                     optimisticChecked.update { current ->
                         current.filterKeys { key -> key.first != habitId }
                     }
-                    _events.emit(DashboardUiEvent.ShowMessage("已从此设备删除该习惯及其打卡记录"))
+                    _events.emit(DashboardUiEvent.ShowResourceMessage(R.string.habit_delete_success))
                 }
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
-                _events.emit(DashboardUiEvent.ShowMessage("删除习惯失败，请稍后重试"))
+                _events.emit(DashboardUiEvent.ShowResourceMessage(R.string.habit_delete_failed))
             }
         }
     }
@@ -253,7 +254,7 @@ class DashboardViewModel(
                     val state: DashboardUiState = DashboardUiState.Success(items, today)
                     state
                 }.catch {
-                    emit(DashboardUiState.Error("加载习惯数据失败，请重试"))
+                    emit(DashboardUiState.Error(R.string.dashboard_load_failed))
                 }
             }
             .stateIn(

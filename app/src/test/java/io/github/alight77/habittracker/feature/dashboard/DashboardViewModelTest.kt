@@ -1,5 +1,6 @@
 package io.github.alight77.habittracker.feature.dashboard
 
+import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.local.HabitDao
 import io.github.alight77.habittracker.data.local.RecordEntity
@@ -11,6 +12,8 @@ import io.github.alight77.habittracker.testutil.TestHabitDao
 import io.github.alight77.habittracker.testutil.TestRecordDao
 import io.github.alight77.habittracker.testutil.ThrowOnceHabitDao
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -19,13 +22,17 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
@@ -227,7 +234,7 @@ class DashboardViewModelTest {
         viewModel.onHabitToggle(habitId = 1)
 
         assertEquals(
-            DashboardUiEvent.ShowMessage("打卡状态冲突，请重试"),
+            DashboardUiEvent.ShowResourceMessage(R.string.check_in_conflict),
             event.await()
         )
     }
@@ -266,7 +273,7 @@ class DashboardViewModelTest {
         viewModel.onHabitToggle(habitId = 1)
 
         assertEquals(1, refreshCount)
-        assertEquals(DashboardUiEvent.ShowMessage("日期已更新，请重新操作"), event.await())
+        assertEquals(DashboardUiEvent.ShowResourceMessage(R.string.check_in_date_changed), event.await())
         assertEquals(emptyList<SetTodayHabitCheckedUseCase.Command>(), applied)
     }
 
@@ -338,7 +345,7 @@ class DashboardViewModelTest {
         viewModel.deleteHabit(7)
 
         assertEquals(
-            DashboardUiEvent.ShowMessage("删除习惯失败，请稍后重试"),
+            DashboardUiEvent.ShowResourceMessage(R.string.habit_delete_failed),
             event.await()
         )
         assertNotNull(storedHabitDao.getHabitById(7))
@@ -366,7 +373,7 @@ class DashboardViewModelTest {
         viewModel.deleteHabit(7)
 
         assertEquals(
-            DashboardUiEvent.ShowMessage("已从此设备删除该习惯及其打卡记录"),
+            DashboardUiEvent.ShowResourceMessage(R.string.habit_delete_success),
             event.await()
         )
         assertEquals(
@@ -398,9 +405,39 @@ class DashboardViewModelTest {
 
         assertEquals(null, habitDao.getHabitById(7))
         assertEquals(
-            listOf(DashboardUiEvent.ShowMessage("已从此设备删除该习惯及其打卡记录")),
+            listOf(DashboardUiEvent.ShowResourceMessage(R.string.habit_delete_success)),
             events
         )
+    }
+
+    @Test
+    fun deleteHabit_whenCancelled_keepsRowsAndDoesNotEmitFailure() = runTest {
+        val today = LocalDate.of(2026, 9, 19)
+        val storedHabitDao = TestHabitDao(listOf(habit(id = 7, name = "阅读")))
+        val habitDao = object : HabitDao by storedHabitDao {
+            override suspend fun deleteHabitById(habitId: Int): Int {
+                throw CancellationException("cancelled delete")
+            }
+        }
+        val recordDao = TestRecordDao(listOf(record(7, today, isDone = true)))
+        val viewModel = DashboardViewModel(
+            habitDao = habitDao,
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
+            setTodayHabitChecked = acceptedUseCase(),
+            todaySource = flowOf(today)
+        )
+        val events = mutableListOf<DashboardUiEvent>()
+        backgroundScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            viewModel.events.collect { events += it }
+        }
+
+        viewModel.deleteHabit(7)
+        runCurrent()
+
+        assertEquals(emptyList<DashboardUiEvent>(), events)
+        assertNotNull(storedHabitDao.getHabitById(7))
+        assertNotNull(recordDao.getRecordByDate(7, today.toEpochDay()))
     }
 
     @Test
@@ -420,7 +457,7 @@ class DashboardViewModelTest {
             .filterIsInstance<DashboardUiState.Error>()
             .first()
 
-        assertEquals("加载习惯数据失败，请重试", error.message)
+        assertEquals(R.string.dashboard_load_failed, error.messageResId)
 
         viewModel.retry()
 
@@ -430,6 +467,45 @@ class DashboardViewModelTest {
 
         assertEquals("阅读", success.items.single().name)
         assertEquals(2, habitDao.subscriptionCount)
+    }
+
+    @Test
+    fun cancelledHabitFlowDoesNotEmitOrdinaryLoadError() = runTest {
+        val sourceStarted = CompletableDeferred<Unit>()
+        val sourceCancelled = CompletableDeferred<Unit>()
+        val habitDao = object : HabitDao by TestHabitDao(emptyList()) {
+            override fun getAllHabits(): Flow<List<HabitEntity>> = flow {
+                sourceStarted.complete(Unit)
+                try {
+                    awaitCancellation()
+                } finally {
+                    sourceCancelled.complete(Unit)
+                }
+            }
+        }
+        val recordDao = TestRecordDao(emptyList())
+        val viewModel = DashboardViewModel(
+            habitDao = habitDao,
+            recordDao = recordDao,
+            repository = HabitRepository(habitDao, recordDao),
+            setTodayHabitChecked = acceptedUseCase(),
+            todaySource = flowOf(LocalDate.of(2026, 9, 19))
+        )
+        val states = mutableListOf<DashboardUiState>()
+        val collector = backgroundScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            viewModel.uiState.collect { states += it }
+        }
+
+        runCurrent()
+        withTimeout(2_000L) { sourceStarted.await() }
+        collector.cancel()
+        // stateIn 的 WhileSubscribed 保留五秒；实际取消后 catch 不应生成 Error。
+        advanceTimeBy(5_100L)
+        runCurrent()
+        withTimeout(2_000L) { sourceCancelled.await() }
+
+        assertFalse(states.any { it is DashboardUiState.Error })
+        assertFalse(viewModel.uiState.value is DashboardUiState.Error)
     }
 
     private fun acceptedUseCase(): SetTodayHabitCheckedUseCase {

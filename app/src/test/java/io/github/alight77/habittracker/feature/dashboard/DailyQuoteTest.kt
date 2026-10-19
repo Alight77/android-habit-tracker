@@ -29,6 +29,19 @@ class DailyQuoteTest {
     }
 
     @Test
+    fun eighteenConsecutiveDaysVisitEveryQuoteIndexAndRepeatDeterministically() {
+        val firstDate = LocalDate.of(2026, 10, 11)
+        val indices = (0 until quoteCount).map { offset ->
+            dailyQuoteIndex(firstDate.plusDays(offset.toLong()), quoteCount)
+        }
+
+        assertEquals((0 until quoteCount).toSet(), indices.toSet())
+        assertEquals(indices, (0 until quoteCount).map { offset ->
+            dailyQuoteIndex(LocalDate.parse(firstDate.plusDays(offset.toLong()).toString()), quoteCount)
+        })
+    }
+
+    @Test
     fun datesBeforeEpochAlsoMapToValidQuote() {
         assertEquals(quoteCount - 1, dailyQuoteIndex(LocalDate.of(1969, 12, 31), quoteCount))
     }

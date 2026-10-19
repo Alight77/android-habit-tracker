@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -60,10 +61,18 @@ import io.github.alight77.habittracker.ui.icon.HabitIconCatalog
 import io.github.alight77.habittracker.ui.icon.HabitIconPalette
 import io.github.alight77.habittracker.ui.theme.HabitTrackerTheme
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+private val chineseDayDateFormatter = DateTimeFormatter.ofPattern("uuuu年M月d日", Locale.SIMPLIFIED_CHINESE)
+private val englishDayDateFormatter = DateTimeFormatter.ofPattern("MMMM d, uuuu", Locale.ENGLISH)
+private val chineseDayWeekdayFormatter = DateTimeFormatter.ofPattern("E", Locale.SIMPLIFIED_CHINESE)
+private val englishDayWeekdayFormatter = DateTimeFormatter.ofPattern("EEEE", Locale.ENGLISH)
 
 @Composable
 fun HabitCard(
     habit: HabitItemUiState,
+    today: LocalDate,
     onCheckClick: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
@@ -186,6 +195,7 @@ fun HabitCard(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     RecentCheckInStrip(
                         days = habit.recentDays,
+                        today = today,
                         palette = palette,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -203,6 +213,7 @@ fun HabitCard(
                 ) {
                     RecentCheckInStrip(
                         days = habit.recentDays,
+                        today = today,
                         palette = palette,
                         modifier = Modifier.weight(1f)
                     )
@@ -225,34 +236,48 @@ private fun CardMetaText(text: String) {
 @Composable
 private fun RecentCheckInStrip(
     days: List<RecentCheckInDay>,
+    today: LocalDate,
     palette: HabitIconPalette,
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
     val largeText = LocalDensity.current.fontScale >= 1.5f
+    val context = LocalContext.current
+    val isChinese = stringResource(R.string.ui_language_tag) == "zh"
+    val weekdayLabels = context.resources.getStringArray(R.array.habit_weekday_short)
+    val dateFormatter = if (isChinese) chineseDayDateFormatter else englishDayDateFormatter
+    val weekdayFormatter = if (isChinese) chineseDayWeekdayFormatter else englishDayWeekdayFormatter
     val checkedText = stringResource(R.string.habit_day_checked)
     val uncheckedText = stringResource(R.string.habit_day_unchecked)
     val beforeCreationText = stringResource(R.string.habit_day_before_creation)
     val todayUncheckedText = stringResource(R.string.habit_day_today_unchecked)
-    val details = days.joinToString("，") { day ->
+    val details = days.joinToString(if (isChinese) "，" else "; ") { day ->
+        val isToday = day.date == today
         val state = when (day.status) {
             RecentDayStatus.CHECKED -> checkedText
             RecentDayStatus.BEFORE_CREATION -> beforeCreationText
             RecentDayStatus.NOT_CHECKED -> {
-                if (day == days.last()) todayUncheckedText else uncheckedText
+                if (isToday) todayUncheckedText else uncheckedText
             }
         }
-        "${day.date.monthValue}月${day.date.dayOfMonth}日$state"
+        // 未打卡的今日状态已含“今天”；其他今日状态在模板中补充今天标记。
+        val template = if (isToday && day.status != RecentDayStatus.NOT_CHECKED) {
+            R.string.habit_recent_day_today_accessibility
+        } else {
+            R.string.habit_recent_day_accessibility
+        }
+        context.getString(template, dateFormatter.format(day.date), weekdayFormatter.format(day.date), state)
     }
     val description = stringResource(R.string.habit_recent_days_description, details)
     val squareSize = if (largeText) 22.dp else 14.dp
 
-    // 七格保留逐日历史；目标和连续天数已在上一行展示，这里只用“今”标明时间方向。
+    // 七格依照传入日期逐日展示；今天由 Success.today 判定，不依赖列表位置或打卡状态。
     Row(
         modifier = modifier.clearAndSetSemantics { contentDescription = description },
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         days.forEach { day ->
+            val isToday = day.date == today
             val shape = RoundedCornerShape(3.dp)
             val fill = when (day.status) {
                 RecentDayStatus.CHECKED -> palette.checkedDay
@@ -273,15 +298,25 @@ private fun RecentCheckInStrip(
                         .border(1.dp, outline, shape)
                 )
                 Text(
-                    text = if (day == days.last()) {
+                    text = if (isChinese && isToday) {
                         stringResource(R.string.habit_today_short)
                     } else {
-                        "一二三四五六日"[day.date.dayOfWeek.value - 1].toString()
+                        weekdayLabels[day.date.dayOfWeek.value - 1]
                     },
-                    color = colors.onSurfaceVariant,
+                    color = if (!isChinese && isToday) colors.primary else colors.onSurfaceVariant,
                     fontSize = if (largeText) 11.sp else 10.sp,
+                    fontWeight = if (!isChinese && isToday) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1
                 )
+                if (!isChinese && isToday) {
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 2.dp)
+                            .size(4.dp)
+                            .background(colors.primary, CircleShape)
+                            .testTag("recent-check-in-today-marker")
+                    )
+                }
             }
         }
     }
@@ -394,6 +429,7 @@ private fun HabitCardMultiplePreview() {
                         streak = 4,
                         recentDays = previewRecentDays(setOf(0L, 1L, 2L, 3L))
                     ),
+                    today = LocalDate.of(2026, 10, 11),
                     onCheckClick = {},
                     onEditClick = {},
                     onDeleteClick = {}
@@ -408,6 +444,7 @@ private fun HabitCardMultiplePreview() {
                         streak = 0,
                         recentDays = previewRecentDays(setOf(2L, 4L))
                     ),
+                    today = LocalDate.of(2026, 10, 11),
                     onCheckClick = {},
                     onEditClick = {},
                     onDeleteClick = {}
@@ -461,6 +498,7 @@ private fun HabitCardPreviewContent(habit: HabitItemUiState, darkTheme: Boolean 
         Surface(color = MaterialTheme.colorScheme.background) {
             HabitCard(
                 habit = habit,
+                today = LocalDate.of(2026, 10, 11),
                 onCheckClick = {},
                 onEditClick = {},
                 onDeleteClick = {}

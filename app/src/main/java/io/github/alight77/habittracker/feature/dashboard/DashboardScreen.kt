@@ -46,6 +46,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +60,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -96,6 +98,7 @@ fun DashboardScreen(
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
     val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val currentContext = rememberUpdatedState(LocalContext.current)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshToday()
@@ -105,7 +108,9 @@ fun DashboardScreen(
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.events.collect { event ->
                 when (event) {
-                    is DashboardUiEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
+                    is DashboardUiEvent.ShowResourceMessage -> snackbarHostState.showSnackbar(
+                        currentContext.value.getString(event.messageResId)
+                    )
                 }
             }
         }
@@ -264,7 +269,7 @@ private fun DashboardBody(
     when (uiState) {
         DashboardUiState.Loading -> LoadingDashboard(modifier)
 
-        is DashboardUiState.Error -> ErrorDashboard(uiState.message, onRetry, modifier)
+        is DashboardUiState.Error -> ErrorDashboard(stringResource(uiState.messageResId), onRetry, modifier)
 
         is DashboardUiState.Success -> {
             BoxWithConstraints(modifier = modifier.fillMaxSize()) {
@@ -300,6 +305,7 @@ private fun DashboardBody(
                         ) { item ->
                             HabitCard(
                                 habit = item,
+                                today = uiState.today,
                                 // 卡片只上报点击；目标由 ViewModel 根据最新意图同步计算。
                                 onCheckClick = { onCheckClick(item.id) },
                                 onEditClick = { onEditClick(item.id) },
@@ -529,7 +535,7 @@ fun DashboardContentLoadingPreview() {
 fun DashboardContentErrorPreview() {
     HabitTrackerTheme {
         DashboardContent(
-            uiState = DashboardUiState.Error("加载习惯数据失败，请重试"),
+            uiState = DashboardUiState.Error(R.string.dashboard_load_failed),
             onCheckClick = { _ -> },
             onAddClick = {},
             onEditClick = {},

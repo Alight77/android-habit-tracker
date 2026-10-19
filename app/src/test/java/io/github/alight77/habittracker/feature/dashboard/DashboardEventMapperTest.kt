@@ -1,7 +1,9 @@
 package io.github.alight77.habittracker.feature.dashboard
 
+import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.LocalDate
 
@@ -18,7 +20,19 @@ class DashboardEventMapperTest {
 
         val message = dashboardMessageFor(event)
 
-        assertEquals("打卡保存失败，请稍后重试", message)
+        assertEquals(R.string.check_in_persist_failed, message)
+    }
+
+    @Test
+    fun dashboardMessageFor_distinguishesConvergenceTimeoutFromPersistFailure() {
+        val event = SetTodayHabitCheckedUseCase.DomainEvent.Reverted(
+            habitId = 1,
+            failedTargetChecked = true,
+            today = LocalDate.of(2026, 7, 7),
+            reason = SetTodayHabitCheckedUseCase.RollbackReason.CONVERGENCE_TIMEOUT
+        )
+
+        assertEquals(R.string.check_in_convergence_timeout, dashboardMessageFor(event))
     }
 
     @Test
@@ -32,7 +46,19 @@ class DashboardEventMapperTest {
 
         val message = dashboardMessageFor(event)
 
-        assertEquals("打卡状态冲突，请重试", message)
+        assertEquals(R.string.check_in_conflict, message)
+    }
+
+    @Test
+    fun dashboardMessageFor_mapsMissingHabitRejection() {
+        val event = SetTodayHabitCheckedUseCase.DomainEvent.Rejected(
+            habitId = 1,
+            targetChecked = true,
+            today = LocalDate.of(2026, 7, 7),
+            reason = SetTodayHabitCheckedUseCase.RejectionReason.HABIT_NOT_FOUND
+        )
+
+        assertEquals(R.string.check_in_habit_not_found, dashboardMessageFor(event))
     }
 
     @Test
@@ -44,6 +70,21 @@ class DashboardEventMapperTest {
             reason = SetTodayHabitCheckedUseCase.RollbackReason.CANCELLED
         )
 
-        assertEquals("打卡操作已中断，请重试", dashboardMessageFor(event))
+        assertEquals(R.string.check_in_cancelled, dashboardMessageFor(event))
+    }
+
+    @Test
+    fun dashboardMessageFor_keepsNormalDomainEventsSilent() {
+        val date = LocalDate.of(2026, 7, 7)
+
+        assertNull(dashboardMessageFor(
+            SetTodayHabitCheckedUseCase.DomainEvent.OptimisticApplied(1, true, date)
+        ))
+        assertNull(dashboardMessageFor(
+            SetTodayHabitCheckedUseCase.DomainEvent.Confirmed(1, true, date)
+        ))
+        assertNull(dashboardMessageFor(
+            SetTodayHabitCheckedUseCase.DomainEvent.Superseded(1, false, true, date)
+        ))
     }
 }

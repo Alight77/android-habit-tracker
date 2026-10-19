@@ -1,22 +1,24 @@
 package io.github.alight77.habittracker.feature.dashboard
 
+import androidx.annotation.StringRes
+import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.domain.usecase.dashboard.SetTodayHabitCheckedUseCase
 
 sealed interface DashboardUiEvent {
-    data class ShowMessage(val message: String) : DashboardUiEvent
+    data class ShowResourceMessage(@param:StringRes val messageResId: Int) : DashboardUiEvent
 }
 
-internal fun dashboardMessageFor(event: SetTodayHabitCheckedUseCase.DomainEvent): String? {
+internal fun dashboardMessageFor(event: SetTodayHabitCheckedUseCase.DomainEvent): Int? {
     return when (event) {
         is SetTodayHabitCheckedUseCase.DomainEvent.Reverted -> when (event.reason) {
-            SetTodayHabitCheckedUseCase.RollbackReason.PERSIST_FAILED -> "打卡保存失败，请稍后重试"
-            SetTodayHabitCheckedUseCase.RollbackReason.CONVERGENCE_TIMEOUT -> "打卡状态同步超时，请重试"
-            SetTodayHabitCheckedUseCase.RollbackReason.CANCELLED -> "打卡操作已中断，请重试"
+            SetTodayHabitCheckedUseCase.RollbackReason.PERSIST_FAILED -> R.string.check_in_persist_failed
+            SetTodayHabitCheckedUseCase.RollbackReason.CONVERGENCE_TIMEOUT -> R.string.check_in_convergence_timeout
+            SetTodayHabitCheckedUseCase.RollbackReason.CANCELLED -> R.string.check_in_cancelled
         }
 
         is SetTodayHabitCheckedUseCase.DomainEvent.Rejected -> when (event.reason) {
-            SetTodayHabitCheckedUseCase.RejectionReason.HABIT_NOT_FOUND -> "习惯不存在或已删除"
-            SetTodayHabitCheckedUseCase.RejectionReason.CONFLICT -> "打卡状态冲突，请重试"
+            SetTodayHabitCheckedUseCase.RejectionReason.HABIT_NOT_FOUND -> R.string.check_in_habit_not_found
+            SetTodayHabitCheckedUseCase.RejectionReason.CONFLICT -> R.string.check_in_conflict
         }
 
         else -> null

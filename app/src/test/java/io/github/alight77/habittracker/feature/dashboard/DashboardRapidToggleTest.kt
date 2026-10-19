@@ -1,5 +1,6 @@
 package io.github.alight77.habittracker.feature.dashboard
 
+import io.github.alight77.habittracker.R
 import io.github.alight77.habittracker.data.local.HabitEntity
 import io.github.alight77.habittracker.data.local.RecordDao
 import io.github.alight77.habittracker.data.local.RecordEntity
@@ -109,7 +110,7 @@ class DashboardRapidToggleTest {
 
         assertEquals(emptyList<SetTodayHabitCheckedUseCase.Command>(), submitted)
         assertEquals(1, refreshCount)
-        assertEquals(DashboardUiEvent.ShowMessage("日期已更新，请重新操作"), warning.await())
+        assertEquals(DashboardUiEvent.ShowResourceMessage(R.string.check_in_date_changed), warning.await())
     }
 
     @Test
@@ -154,7 +155,7 @@ class DashboardRapidToggleTest {
         releaseWrite.complete(Unit)
         runCurrent()
 
-        assertEquals(DashboardUiEvent.ShowMessage("打卡保存失败，请稍后重试"), warning.await())
+        assertEquals(DashboardUiEvent.ShowResourceMessage(R.string.check_in_persist_failed), warning.await())
     }
 
     @Test
@@ -182,7 +183,7 @@ class DashboardRapidToggleTest {
 
         viewModel.onHabitToggle(1)
         runCurrent()
-        assertEquals(DashboardUiEvent.ShowMessage("打卡保存失败，请稍后重试"), failure.await())
+        assertEquals(DashboardUiEvent.ShowResourceMessage(R.string.check_in_persist_failed), failure.await())
         viewModel.onHabitToggle(1)
         runCurrent()
 
@@ -418,7 +419,7 @@ class DashboardRapidToggleTest {
         advanceTimeBy(10L)
         runCurrent()
         assertEquals(
-            DashboardUiEvent.ShowMessage("打卡状态同步超时，请重试"),
+            DashboardUiEvent.ShowResourceMessage(R.string.check_in_convergence_timeout),
             timeoutMessage.await()
         )
         assertEquals(true, recordDao.getRecordByDate(1, today.toEpochDay())?.isDone)
