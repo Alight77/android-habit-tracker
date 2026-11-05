@@ -14,13 +14,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -208,15 +212,22 @@ private fun DashboardScaffold(
             },
             bottomBar = bottomBar,
             floatingActionButton = {
-                FloatingActionButton(
-                    modifier = Modifier.semantics {
-                        contentDescription = addHabitContentDescription
-                    },
-                    onClick = onAddClick,
-                    containerColor = colors.primary,
-                    contentColor = colors.onPrimary
+                // 横屏三键导航栏可能位于 End 侧，按实际 Insets 避让并保留 FAB 的完整触摸区域。
+                Box(
+                    modifier = Modifier.windowInsetsPadding(
+                        WindowInsets.navigationBars.only(WindowInsetsSides.End)
+                    )
                 ) {
-                    Text("+")
+                    FloatingActionButton(
+                        modifier = Modifier.semantics {
+                            contentDescription = addHabitContentDescription
+                        },
+                        onClick = onAddClick,
+                        containerColor = colors.primary,
+                        contentColor = colors.onPrimary
+                    ) {
+                        Text("+")
+                    }
                 }
             },
             contentWindowInsets = WindowInsets.systemBars
@@ -275,6 +286,8 @@ private fun DashboardBody(
             BoxWithConstraints(modifier = modifier.fillMaxSize()) {
                 var headerHeightPx by remember { mutableIntStateOf(0) }
                 val density = LocalDensity.current
+                // 用正文的有界高度判断短视口；LazyColumn 内的纵向约束不能代表屏幕可用高度。
+                val compactHeader = maxHeight < 360.dp
                 // 空状态在页头与底部操作区之间居中；测量实际页头高度以适应字号和窄屏。
                 val emptyMinHeight = (
                     this.maxHeight - with(density) { headerHeightPx.toDp() } - 88.dp
@@ -287,7 +300,7 @@ private fun DashboardBody(
                     item(key = "today_header") {
                         Box(modifier = Modifier.onSizeChanged { headerHeightPx = it.height }) {
                             // 页头直接使用与卡片同一份 Success 状态中的日期，避免出现旧日标题。
-                            TodayJournalHeader(today = uiState.today)
+                            TodayJournalHeader(today = uiState.today, compactForShortViewport = compactHeader)
                         }
                     }
                     if (uiState.items.isEmpty()) {

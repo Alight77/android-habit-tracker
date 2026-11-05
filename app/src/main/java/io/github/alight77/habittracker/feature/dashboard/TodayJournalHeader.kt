@@ -49,7 +49,11 @@ private val lunarMonths = listOf("正", "二", "三", "四", "五", "六", "七"
 private val lunarDigits = listOf("一", "二", "三", "四", "五", "六", "七", "八", "九")
 
 @Composable
-internal fun TodayJournalHeader(today: LocalDate, modifier: Modifier = Modifier) {
+internal fun TodayJournalHeader(
+    today: LocalDate,
+    modifier: Modifier = Modifier,
+    compactForShortViewport: Boolean = false
+) {
     val colors = MaterialTheme.colorScheme
     val largeText = LocalDensity.current.fontScale >= 1.5f
     val isLight = colors.background.luminance() > 0.5f
@@ -66,7 +70,10 @@ internal fun TodayJournalHeader(today: LocalDate, modifier: Modifier = Modifier)
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
-            .padding(top = if (largeText) 16.dp else 24.dp, bottom = 10.dp)
+            .padding(
+                top = if (compactForShortViewport) 8.dp else if (largeText) 16.dp else 24.dp,
+                bottom = if (compactForShortViewport) 8.dp else 10.dp
+            )
     ) {
         Text(
             text = dateText,
@@ -75,72 +82,75 @@ internal fun TodayJournalHeader(today: LocalDate, modifier: Modifier = Modifier)
             lineHeight = if (largeText) 44.sp else 54.sp,
             fontWeight = FontWeight.Bold
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(if (compactForShortViewport) 0.dp else 4.dp))
         Text(
             text = weekdayText,
             color = colors.onBackground,
             fontSize = if (largeText) 15.sp else 17.sp,
             lineHeight = 24.sp
         )
-        Spacer(Modifier.height(if (largeText) 12.dp else 14.dp))
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val fontScale = LocalDensity.current.fontScale
-            val narrow = maxWidth < 340.dp
-            val compactPaper = narrow || fontScale > 1f
-            val quotes = LocalContext.current.resources.getStringArray(R.array.dashboard_daily_quotes)
-            val quote = quotes[dailyQuoteIndex(today, quotes.size)]
-            // 中文保留既有窄屏拆行；英语沿用资源换行并交给排版引擎按词折行。
-            val displayedQuote = if (showChineseCalendar && narrow && fontScale >= 1.75f) {
-                balanceQuoteForNarrowLargeText(quote)
-            } else {
-                quote
-            }
-
-            if (isLight && fontScale < 1.25f) {
-                // 纸条图片只作底纹，寄语仍由 Compose 绘制，字号变化时不会失真。
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(if (compactPaper) 0.9f else 0.78f)
-                        .aspectRatio(3f)
-                        .testTag("dailyQuoteContainer")
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.dashboard_quote_paper),
-                        contentDescription = null,
-                        contentScale = ContentScale.FillBounds,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                    Text(
-                        text = displayedQuote,
-                        color = colors.onSurface,
-                        fontFamily = FontFamily.Serif,
-                        fontSize = if (compactPaper) 14.sp else 17.sp,
-                        lineHeight = if (compactPaper) 23.sp else 27.sp,
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .padding(horizontal = if (compactPaper) 18.dp else 20.dp)
-                    )
+        // 矮视口先展示可打卡的习惯；寄语纸条的宽高比会随横屏宽度占满首屏。
+        if (!compactForShortViewport) {
+            Spacer(Modifier.height(if (largeText) 12.dp else 14.dp))
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val fontScale = LocalDensity.current.fontScale
+                val narrow = maxWidth < 340.dp
+                val compactPaper = narrow || fontScale > 1f
+                val quotes = LocalContext.current.resources.getStringArray(R.array.dashboard_daily_quotes)
+                val quote = quotes[dailyQuoteIndex(today, quotes.size)]
+                // 中文保留既有窄屏拆行；英语沿用资源换行并交给排版引擎按词折行。
+                val displayedQuote = if (showChineseCalendar && narrow && fontScale >= 1.75f) {
+                    balanceQuoteForNarrowLargeText(quote)
+                } else {
+                    quote
                 }
-            } else {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(
-                        if (largeText) 1f else if (fontScale >= 1.25f) 0.9f else 0.78f
-                    ).testTag("dailyQuoteContainer"),
-                    shape = RoundedCornerShape(5.dp),
-                    color = if (isLight) WarmPaperMiddle else colors.surface,
-                    shadowElevation = if (isLight) 1.dp else 0.dp
-                ) {
-                    Text(
-                        text = displayedQuote,
-                        color = colors.onSurface,
-                        fontFamily = FontFamily.Serif,
-                        fontSize = if (fontScale >= 1.25f) 15.sp else 17.sp,
-                        lineHeight = if (fontScale >= 1.25f) 25.sp else 27.sp,
-                        modifier = Modifier.padding(
-                            horizontal = if (fontScale >= 1.25f) 12.dp else 20.dp,
-                            vertical = 16.dp
+
+                if (isLight && fontScale < 1.25f) {
+                    // 纸条图片只作底纹，寄语仍由 Compose 绘制，字号变化时不会失真。
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(if (compactPaper) 0.9f else 0.78f)
+                            .aspectRatio(3f)
+                            .testTag("dailyQuoteContainer")
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.dashboard_quote_paper),
+                            contentDescription = null,
+                            contentScale = ContentScale.FillBounds,
+                            modifier = Modifier.fillMaxSize()
                         )
-                    )
+                        Text(
+                            text = displayedQuote,
+                            color = colors.onSurface,
+                            fontFamily = FontFamily.Serif,
+                            fontSize = if (compactPaper) 14.sp else 17.sp,
+                            lineHeight = if (compactPaper) 23.sp else 27.sp,
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(horizontal = if (compactPaper) 18.dp else 20.dp)
+                        )
+                    }
+                } else {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(
+                            if (largeText) 1f else if (fontScale >= 1.25f) 0.9f else 0.78f
+                        ).testTag("dailyQuoteContainer"),
+                        shape = RoundedCornerShape(5.dp),
+                        color = if (isLight) WarmPaperMiddle else colors.surface,
+                        shadowElevation = if (isLight) 1.dp else 0.dp
+                    ) {
+                        Text(
+                            text = displayedQuote,
+                            color = colors.onSurface,
+                            fontFamily = FontFamily.Serif,
+                            fontSize = if (fontScale >= 1.25f) 15.sp else 17.sp,
+                            lineHeight = if (fontScale >= 1.25f) 25.sp else 27.sp,
+                            modifier = Modifier.padding(
+                                horizontal = if (fontScale >= 1.25f) 12.dp else 20.dp,
+                                vertical = 16.dp
+                            )
+                        )
+                    }
                 }
             }
         }

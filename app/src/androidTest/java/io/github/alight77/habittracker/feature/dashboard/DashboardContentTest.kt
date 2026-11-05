@@ -129,6 +129,80 @@ class DashboardContentTest {
     }
 
     @Test
+    fun shortViewportKeepsFirstHabitNameVisibleWithoutQuote() {
+        val configuration = Configuration(composeRule.activity.resources.configuration).apply {
+            setLocale(Locale.US)
+        }
+        val englishContext = composeRule.activity.createConfigurationContext(configuration)
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalContext provides englishContext,
+                LocalConfiguration provides configuration
+            ) {
+                HabitTrackerTheme {
+                    Box(Modifier.width(320.dp).height(360.dp)) {
+                        DashboardContent(
+                            uiState = DashboardUiState.Success(
+                                items = listOf(
+                                    HabitItemUiState(
+                                        id = 1,
+                                        name = "Test habit",
+                                        targetPerWeek = 3,
+                                        isDoneToday = false,
+                                        streak = 0,
+                                        recentDays = emptyList()
+                                    )
+                                ),
+                                today = LocalDate.of(2026, 10, 11)
+                            ),
+                            onCheckClick = {},
+                            onAddClick = {},
+                            onEditClick = {},
+                            onDeleteHabit = {},
+                            onRetry = {}
+                        )
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Oct 11").assertIsDisplayed()
+        composeRule.onNodeWithText("Sunday").assertIsDisplayed()
+        composeRule.onNodeWithTag("dailyQuoteContainer").assertDoesNotExist()
+        val listBounds = composeRule.onNode(hasScrollAction()).fetchSemanticsNode().boundsInRoot
+        val habitBounds = composeRule.onNodeWithText("Test habit")
+            .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        assertTrue(habitBounds.top >= listBounds.top && habitBounds.bottom <= listBounds.bottom)
+    }
+
+    @Test
+    fun shortViewportEmptyGuidanceRemainsReachableAtDoubleFontScale() {
+        val addClickCount = AtomicInteger(0)
+        composeRule.setContent {
+            val deviceDensity = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(deviceDensity.density, 2f)) {
+                HabitTrackerTheme {
+                    Box(Modifier.width(320.dp).height(320.dp)) {
+                        DashboardContent(
+                            uiState = DashboardUiState.Success(emptyList(), LocalDate.of(2026, 10, 11)),
+                            onCheckClick = {},
+                            onAddClick = { addClickCount.incrementAndGet() },
+                            onEditClick = {},
+                            onDeleteHabit = {},
+                            onRetry = {}
+                        )
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("dailyQuoteContainer").assertDoesNotExist()
+        composeRule.onNodeWithText("点＋创建习惯").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("新增习惯").performClick()
+        assertEquals(1, addClickCount.get())
+    }
+
+    @Test
     fun loadingErrorAndEmptyTransitionKeepsFeedbackAndRetry() {
         val state = mutableStateOf<DashboardUiState>(DashboardUiState.Loading)
         val retryCount = AtomicInteger(0)
