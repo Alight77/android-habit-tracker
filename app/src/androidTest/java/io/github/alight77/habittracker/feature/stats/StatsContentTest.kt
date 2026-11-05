@@ -30,6 +30,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -76,8 +77,8 @@ class StatsContentTest {
 
         listOf(
             StatsUiState.Loading,
-            StatsUiState.Success(StatsSummary(0, 0, 0, 0, 0, emptyList())),
-            StatsUiState.Success(StatsSummary(1, 0, 0, 0, 0, emptyList())),
+            StatsUiState.Success(StatsSummary(0, 0, 0, 0, emptyList())),
+            StatsUiState.Success(StatsSummary(1, 0, 0, 0, emptyList())),
             StatsUiState.Error(R.string.stats_load_failed)
         ).forEach { nextState ->
             composeRule.runOnUiThread { state = nextState }
@@ -101,7 +102,7 @@ class StatsContentTest {
         var openedUrl: String? = null
         composeRule.setContent {
             StatsContent(
-                uiState = StatsUiState.Success(StatsSummary(1, 0, 0, 0, 0, emptyList())),
+                uiState = StatsUiState.Success(StatsSummary(1, 0, 0, 0, emptyList())),
                 onRetry = {},
                 onOpenPrivacyPolicy = { uri ->
                     openedUrl = uri.toString()
@@ -148,7 +149,7 @@ class StatsContentTest {
         composeRule.setContent {
             Box(Modifier.width(320.dp).height(500.dp)) {
                 StatsContent(
-                    uiState = StatsUiState.Success(StatsSummary(1, 0, 0, 0, 0, emptyList())),
+                    uiState = StatsUiState.Success(StatsSummary(1, 0, 0, 0, emptyList())),
                     onRetry = {},
                     onOpenPrivacyPolicy = { true }
                 )
@@ -168,7 +169,6 @@ class StatsContentTest {
                         totalHabits = 0,
                         todayDoneCount = 0,
                         totalDoneCount = 0,
-                        recentSevenDayGoalPercent = 0,
                         longestStreak = 0,
                         recentSevenDayCounts = (6L downTo 0L).map { daysAgo ->
                             DailyCheckInCount(LocalDate.of(2026, 10, 11).minusDays(daysAgo), 0)
@@ -203,7 +203,6 @@ class StatsContentTest {
                         totalHabits = 1,
                         todayDoneCount = 0,
                         totalDoneCount = 0,
-                        recentSevenDayGoalPercent = 0,
                         longestStreak = 0,
                         recentSevenDayCounts = (6L downTo 0L).map { daysAgo ->
                             DailyCheckInCount(LocalDate.of(2026, 10, 11).minusDays(daysAgo), 0)
@@ -222,7 +221,7 @@ class StatsContentTest {
     fun errorReplacesPreviouslyDisplayedSuccessMetrics() {
         var state by mutableStateOf<StatsUiState>(
             StatsUiState.Success(
-                StatsSummary(1, 0, 0, 0, 0, emptyList())
+                StatsSummary(1, 0, 0, 0, emptyList())
             )
         )
         composeRule.setContent {
@@ -325,15 +324,14 @@ class StatsContentTest {
     }
 
     @Test
-    fun summaryLabelsRecentRateAsGoalAchievement() {
+    fun habitTrendShowsFiveWeeksAndDistinguishesUncreatedZeroAndCurrent() {
         composeRule.setContent {
             StatsContent(
                 uiState = StatsUiState.Success(
-                    StatsSummary(
+                    summary = StatsSummary(
                         totalHabits = 1,
                         todayDoneCount = 1,
                         totalDoneCount = 1,
-                        recentSevenDayGoalPercent = 100,
                         longestStreak = 1,
                         recentSevenDayCounts = (6L downTo 0L).map { daysAgo ->
                             DailyCheckInCount(
@@ -341,16 +339,32 @@ class StatsContentTest {
                                 if (daysAgo == 0L) 1 else 0
                             )
                         }
-                    )
+                    ),
+                    availableHabits = listOf(StatsHabitOption(1, "阅读")),
+                    selectedHabitId = 1,
+                    weeklyTrend = sampleWeeklyTrend()
                 ),
                 onRetry = {}
             )
         }
 
-        composeRule.onNodeWithText("近 7 天目标达成率").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("近 7 天目标达成率，100%")
-            .performScrollTo()
-            .assertIsDisplayed()
+        composeRule.onNodeWithText("习惯趋势").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("每周打卡天数").assertIsDisplayed()
+        (0..4).forEach { index ->
+            composeRule.onNodeWithTag("stats-trend-week-$index").assertExists()
+        }
+        composeRule.onNodeWithContentDescription(
+            "2026年9月7日至2026年9月13日，尚未创建。"
+        ).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithContentDescription(
+            "2026年9月21日至2026年9月27日，打卡0天。"
+        ).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithContentDescription(
+            "2026年10月5日至2026年10月11日，打卡1天。 本周尚未结束"
+        ).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag("stats-trend-progress-note")
+            .performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("进行中").assertDoesNotExist()
     }
 
     @Test
@@ -363,7 +377,6 @@ class StatsContentTest {
                         totalHabits = 3,
                         todayDoneCount = 2,
                         totalDoneCount = 18,
-                        recentSevenDayGoalPercent = 71,
                         longestStreak = 5,
                         recentSevenDayCounts = counts.mapIndexed { index, count ->
                             DailyCheckInCount(
@@ -390,7 +403,6 @@ class StatsContentTest {
         ).forEach { description ->
             composeRule.onNodeWithContentDescription(description).assertIsDisplayed()
         }
-        composeRule.onNodeWithText("71%").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithContentDescription("现有习惯累计打卡，18 次")
             .performScrollTo()
             .assertIsDisplayed()
@@ -422,7 +434,6 @@ class StatsContentTest {
                             totalHabits = 7,
                             todayDoneCount = todayCount,
                             totalDoneCount = todayCount,
-                            recentSevenDayGoalPercent = 0,
                             longestStreak = 0,
                             recentSevenDayCounts = orderedDates.map { date ->
                                 DailyCheckInCount(date, if (date == chartToday) todayCount else 0)
@@ -504,7 +515,6 @@ class StatsContentTest {
                                         totalHabits = 7,
                                         todayDoneCount = 2,
                                         totalDoneCount = 12,
-                                        recentSevenDayGoalPercent = 71,
                                         longestStreak = 5,
                                         recentSevenDayCounts = (6L downTo 0L).map { daysAgo ->
                                             DailyCheckInCount(
@@ -614,7 +624,6 @@ class StatsContentTest {
                             totalHabits = 1,
                             todayDoneCount = 0,
                             totalDoneCount = count,
-                            recentSevenDayGoalPercent = 0,
                             longestStreak = count,
                             recentSevenDayCounts = emptyList()
                         )
@@ -670,7 +679,6 @@ class StatsContentTest {
                                 totalHabits = 10000,
                                 todayDoneCount = 9999,
                                 totalDoneCount = 1234567,
-                                recentSevenDayGoalPercent = 71,
                                 longestStreak = 234567,
                                 recentSevenDayCounts = (6L downTo 0L).map { daysAgo ->
                                     DailyCheckInCount(
@@ -696,9 +704,6 @@ class StatsContentTest {
         composeRule.onNodeWithContentDescription("今天，2026年10月11日，星期日，9999 次打卡")
             .performScrollTo()
             .assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("近 7 天目标达成率，71%")
-            .performScrollTo()
-            .assertIsDisplayed()
         listOf("1234567", "234567").forEach { value ->
             composeRule.onNodeWithText(value, useUnmergedTree = true)
                 .performScrollTo()
@@ -706,6 +711,144 @@ class StatsContentTest {
             val bounds = composeRule.onNodeWithText(value, useUnmergedTree = true)
                 .fetchSemanticsNode().boundsInRoot
             assertTrue("$value exceeds 320dp", bounds.right <= rightEdge + 1f)
+        }
+    }
+
+    @Test
+    fun habitSelectorReportsSelectionAndUpdatesNameWithTrendTogether() {
+        var state by mutableStateOf(
+            StatsUiState.Success(
+                summary = StatsSummary(2, 0, 0, 0, emptyList()),
+                availableHabits = listOf(
+                    StatsHabitOption(2, "运动"), StatsHabitOption(1, "阅读")
+                ),
+                selectedHabitId = 2,
+                weeklyTrend = sampleWeeklyTrend(currentDays = 0)
+            )
+        )
+        var selectedByUi: Int? = null
+        composeRule.setContent {
+            StatsContent(
+                uiState = state,
+                onRetry = {},
+                onHabitSelected = { habitId ->
+                    selectedByUi = habitId
+                    state = state.copy(
+                        selectedHabitId = habitId,
+                        weeklyTrend = sampleWeeklyTrend(currentDays = 1)
+                    )
+                }
+            )
+        }
+
+        composeRule.onNodeWithContentDescription("选择习惯，当前习惯：运动")
+            .performScrollTo().assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("阅读").assertIsDisplayed().performClick()
+        assertEquals(1, selectedByUi)
+        composeRule.onNodeWithContentDescription("选择习惯，当前习惯：阅读")
+            .assertIsDisplayed()
+        composeRule.onNodeWithContentDescription(
+            "2026年10月5日至2026年10月11日，打卡1天。 本周尚未结束"
+        ).performScrollTo().assertIsDisplayed()
+
+        composeRule.runOnUiThread {
+            state = state.copy(
+                availableHabits = listOf(StatsHabitOption(1, "阅读新版")),
+                selectedHabitId = 1
+            )
+        }
+        composeRule.onNodeWithContentDescription("选择习惯，当前习惯：阅读新版")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun englishLongHabitAndFiveWeekDescriptionsRemainReachableAt320dpAndDoubleText() {
+        val longName = "A very long habit name that must remain complete in TalkBack and the menu"
+        composeRule.setContent {
+            val configuration = Configuration(composeRule.activity.resources.configuration).apply {
+                setLocale(Locale.US)
+            }
+            val localizedContext = composeRule.activity.createConfigurationContext(configuration)
+            val density = LocalDensity.current
+            CompositionLocalProvider(
+                LocalContext provides localizedContext,
+                LocalConfiguration provides configuration,
+                LocalDensity provides Density(density.density, 2f)
+            ) {
+                Box(Modifier.width(320.dp).height(700.dp).testTag("trendNarrowHost")) {
+                    StatsContent(
+                        uiState = StatsUiState.Success(
+                            summary = StatsSummary(1, 0, 0, 0, emptyList()),
+                            availableHabits = listOf(StatsHabitOption(1, longName)),
+                            selectedHabitId = 1,
+                            weeklyTrend = sampleWeeklyTrend()
+                        ),
+                        onRetry = {}
+                    )
+                }
+            }
+        }
+
+        val selector = composeRule.onNodeWithContentDescription(
+            "Select habit. Current habit: $longName"
+        ).performScrollTo().assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val host = composeRule.onNodeWithTag("trendNarrowHost")
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue("selector exceeds 320dp", selector.left >= host.left && selector.right <= host.right)
+        composeRule.onNodeWithContentDescription("Select habit. Current habit: $longName")
+            .performClick()
+        composeRule.onNodeWithText(longName).assertIsDisplayed().performClick()
+
+        composeRule.onNodeWithTag("stats-trend-chart").performScrollTo()
+            .performTouchInput { swipeLeft() }
+        composeRule.onNodeWithTag("stats-trend-week-4").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription(
+            "October 5, 2026 to October 11, 2026. 1 check-in day. " +
+                "This week is still in progress."
+        ).assertIsDisplayed()
+        composeRule.onNodeWithTag("stats-trend-progress-note")
+            .performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Ongoing").assertDoesNotExist()
+    }
+
+    @Test
+    fun allFiveTrendWeeksFit320dpAtNormalFont() {
+        composeRule.setContent {
+            Box(Modifier.width(320.dp).height(700.dp)) {
+                StatsContent(
+                    uiState = StatsUiState.Success(
+                        summary = StatsSummary(1, 0, 0, 0, emptyList()),
+                        availableHabits = listOf(StatsHabitOption(1, "阅读")),
+                        selectedHabitId = 1,
+                        weeklyTrend = sampleWeeklyTrend()
+                    ),
+                    onRetry = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("stats-trend-chart").performScrollTo().assertIsDisplayed()
+        (0..4).forEach { index ->
+            composeRule.onNodeWithTag("stats-trend-week-$index").assertIsDisplayed()
+        }
+    }
+
+    private fun sampleWeeklyTrend(currentDays: Int = 1): List<WeeklyCheckInTrendPoint> {
+        val firstWeekStart = LocalDate.of(2026, 9, 7)
+        return (0..4).map { index ->
+            val weekStart = firstWeekStart.plusWeeks(index.toLong())
+            WeeklyCheckInTrendPoint(
+                weekStart = weekStart,
+                weekEnd = weekStart.plusDays(6),
+                observedThrough = weekStart.plusDays(6),
+                completedDays = when (index) {
+                    3 -> 3
+                    4 -> currentDays
+                    else -> 0
+                },
+                notYetCreated = index < 2,
+                isCurrentWeek = index == 4
+            )
         }
     }
 

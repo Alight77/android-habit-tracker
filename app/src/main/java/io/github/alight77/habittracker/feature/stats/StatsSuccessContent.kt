@@ -30,11 +30,8 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.progressBarRangeInfo
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.TextStyle
@@ -55,7 +52,12 @@ private val englishChartWeekdayFormatter = DateTimeFormatter.ofPattern("EEEE", L
 private val chineseChartWeekdayShortFormatter = DateTimeFormatter.ofPattern("EEE", Locale.SIMPLIFIED_CHINESE)
 
 @Composable
-internal fun StatsSuccessContent(summary: StatsSummary, modifier: Modifier = Modifier) {
+internal fun StatsSuccessContent(
+    state: StatsUiState.Success,
+    onHabitSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val summary = state.summary
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -66,7 +68,12 @@ internal fun StatsSuccessContent(summary: StatsSummary, modifier: Modifier = Mod
         SectionDivider()
         RecentCheckInChart(summary)
         SectionDivider()
-        GoalRateSection(summary)
+        HabitTrendsSection(
+            availableHabits = state.availableHabits,
+            selectedHabitId = state.selectedHabitId,
+            weeklyTrend = state.weeklyTrend,
+            onHabitSelected = onHabitSelected
+        )
         SectionDivider()
         HistoryMetrics(summary)
     }
@@ -186,7 +193,7 @@ private fun RecentCheckInChart(summary: StatsSummary) {
     Spacer(Modifier.height(6.dp))
 
     val days = summary.recentSevenDayCounts
-    // 柱高只表达每日打卡数；目标达成率使用独立的统计口径。
+    // 本图按自然日统计不同习惯，下面的趋势图按单习惯自然周统计。
     // 只用当前七日峰值定标；习惯总数较多但打卡较少时，非零柱仍能看出分布。
     val maxCount = maxOf(days.maxOfOrNull { it.completedHabits } ?: 0, 1)
     // 全零时缩短图表留白，避免空数据把历史指标挤出首屏。
@@ -276,76 +283,6 @@ private fun RecentCheckInChart(summary: StatsSummary) {
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun GoalRateSection(summary: StatsSummary) {
-    val colors = MaterialTheme.colorScheme
-    val percent = summary.recentSevenDayGoalPercent.coerceIn(0, 100)
-    val largeText = LocalDensity.current.fontScale >= 1.5f
-    val progressDescription = stringResource(R.string.stats_goal_rate_accessibility, percent)
-    SectionTitle(
-        stringResource(
-            if (largeText) R.string.stats_recent_seven_day_goal_rate_compact
-            else R.string.stats_recent_seven_day_goal_rate
-        )
-    )
-    if (largeText) {
-        Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 10.dp)) {
-            Text(
-                text = "$percent%",
-                color = colors.primary,
-                fontSize = 48.sp,
-                lineHeight = 56.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = stringResource(R.string.stats_effective_goal_note),
-                color = colors.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-    } else {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 10.dp),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "$percent%",
-                color = colors.primary,
-                fontSize = 52.sp,
-                lineHeight = 60.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = stringResource(R.string.stats_effective_goal_note),
-                color = colors.onSurfaceVariant,
-                fontSize = 12.sp,
-                textAlign = TextAlign.End,
-                modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
-            )
-        }
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(13.dp)
-            .clip(RoundedCornerShape(50))
-            .background(colors.surfaceVariant)
-            .semantics {
-                // 进度条单独获得焦点时，明确它表示目标达成率，而非七日打卡次数。
-                contentDescription = progressDescription
-                progressBarRangeInfo = ProgressBarRangeInfo(percent / 100f, 0f..1f)
-            }
-    ) {
-        Box(
-            Modifier
-                .fillMaxWidth(percent / 100f)
-                .height(13.dp)
-                .background(colors.primary)
-        )
     }
 }
 

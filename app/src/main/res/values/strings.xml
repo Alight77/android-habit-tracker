@@ -124,9 +124,6 @@
     </string-array>
     <string name="habit_recent_day_accessibility">%2$s, %1$s: %3$s</string>
     <string name="habit_recent_day_today_accessibility">%2$s, %1$s (today): %3$s</string>
-    <string name="stats_recent_seven_day_goal_rate">7-day goal completion rate</string>
-    <string name="stats_goal_rate_accessibility">7-day goal completion rate: %1$d%%</string>
-    <string name="stats_recent_seven_day_goal_rate_compact">7-day goal\ncompletion rate</string>
     <string name="stats_today_persistence">Your progress today</string>
     <string name="stats_today_count_accessibility">Habits completed today: %1$d of %2$d</string>
     <string name="stats_recent_checkin_footprint">Check-in history: last 7 days</string>
@@ -134,8 +131,15 @@
     <string name="stats_today_short">Today</string>
     <string name="stats_daily_checkin_description">%2$s, %1$s. Check-ins: %3$d</string>
     <string name="stats_daily_checkin_today_description">Today, %2$s, %1$s. Check-ins: %3$d</string>
+    <string name="stats_habit_trends">Habit Trends</string>
+    <string name="stats_weekly_checkin_days">Weekly check-in days</string>
+    <string name="stats_trend_select_habit_description">Select habit. Current habit: %1$s</string>
+    <string name="stats_trend_this_week">This week</string>
+    <string name="stats_trend_week_description">%1$s to %2$s. %3$d check-in days.</string>
+    <string name="stats_trend_week_description_one">%1$s to %2$s. 1 check-in day.</string>
+    <string name="stats_trend_week_not_created_description">%1$s to %2$s. Not yet created.</string>
+    <string name="stats_trend_this_week_description">This week is still in progress.</string>
     <string name="stats_history_metric_accessibility">%1$s: %2$d %3$s</string>
-    <string name="stats_effective_goal_note">Based on the applicable goal for each habit</string>
     <string name="stats_existing_habits_total_checkins">Total check-ins for current habits</string>
     <string name="stats_single_habit_historical_longest">Longest streak for a single habit</string>
     <string name="stats_check_in_singular">check-in</string>

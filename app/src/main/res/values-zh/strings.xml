@@ -124,9 +124,6 @@
     </string-array>
     <string name="habit_recent_day_accessibility">%1$s，%2$s：%3$s</string>
     <string name="habit_recent_day_today_accessibility">%1$s，%2$s，今天：%3$s</string>
-    <string name="stats_recent_seven_day_goal_rate">近 7 天目标达成率</string>
-    <string name="stats_goal_rate_accessibility">近 7 天目标达成率，%1$d%%</string>
-    <string name="stats_recent_seven_day_goal_rate_compact">近 7 天\n目标达成率</string>
     <string name="stats_today_persistence">今天的坚持</string>
     <string name="stats_today_count_accessibility">今天已完成 %1$d 个习惯，共 %2$d 个</string>
     <string name="stats_recent_checkin_footprint">近 7 天打卡足迹</string>
@@ -134,8 +131,15 @@
     <string name="stats_today_short">今天</string>
     <string name="stats_daily_checkin_description">%1$s，%2$s，%3$d 次打卡</string>
     <string name="stats_daily_checkin_today_description">今天，%1$s，%2$s，%3$d 次打卡</string>
+    <string name="stats_habit_trends">习惯趋势</string>
+    <string name="stats_weekly_checkin_days">每周打卡天数</string>
+    <string name="stats_trend_select_habit_description">选择习惯，当前习惯：%1$s</string>
+    <string name="stats_trend_this_week">本周</string>
+    <string name="stats_trend_week_description">%1$s至%2$s，打卡%3$d天。</string>
+    <string name="stats_trend_week_description_one">%1$s至%2$s，打卡1天。</string>
+    <string name="stats_trend_week_not_created_description">%1$s至%2$s，尚未创建。</string>
+    <string name="stats_trend_this_week_description">本周尚未结束</string>
     <string name="stats_history_metric_accessibility">%1$s，%2$d %3$s</string>
-    <string name="stats_effective_goal_note">按各习惯有效目标汇总</string>
     <string name="stats_existing_habits_total_checkins">现有习惯累计打卡</string>
     <string name="stats_single_habit_historical_longest">单项习惯历史最长连续</string>
     <string name="stats_check_in_singular">次</string>

@@ -68,6 +68,7 @@ fun StatsScreen(
     StatsContent(
         uiState = state,
         onRetry = viewModel::retry,
+        onHabitSelected = viewModel::onHabitSelected,
         bottomBar = bottomBar,
         onOpenPrivacyPolicy = { uri ->
             try {
@@ -88,7 +89,8 @@ fun StatsContent(
     uiState: StatsUiState,
     onRetry: () -> Unit,
     bottomBar: @Composable () -> Unit = {},
-    onOpenPrivacyPolicy: (Uri) -> Boolean = { false }
+    onOpenPrivacyPolicy: (Uri) -> Boolean = { false },
+    onHabitSelected: (Int) -> Unit = {}
 ) {
     val colors = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
@@ -142,7 +144,7 @@ fun StatsContent(
                                 // 零习惯仍保留统计计算结果，但不把七个零值展示成已有打卡足迹。
                                 EmptyStats(Modifier.heightIn(min = viewportHeight))
                             } else {
-                                StatsSuccessContent(summary = uiState.summary)
+                                StatsSuccessContent(state = uiState, onHabitSelected = onHabitSelected)
                             }
                         }
                     }
@@ -183,12 +185,25 @@ fun StatsContentPreview() {
                     totalHabits = 3,
                     todayDoneCount = 2,
                     totalDoneCount = 18,
-                    recentSevenDayGoalPercent = 71,
                     longestStreak = 5,
                     recentSevenDayCounts = listOf(1, 3, 2, 0, 2, 3, 2).mapIndexed { index, count ->
                         DailyCheckInCount(LocalDate.of(2026, 10, 5).plusDays(index.toLong()), count)
                     }
-                )
+                ),
+                availableHabits = listOf(StatsHabitOption(3, "Reading")),
+                selectedHabitId = 3,
+                weeklyTrend = (4 downTo 0).map { weeksAgo ->
+                    val weekStart = LocalDate.of(2026, 10, 5).minusWeeks(weeksAgo.toLong())
+                    WeeklyCheckInTrendPoint(
+                        weekStart = weekStart,
+                        weekEnd = weekStart.plusDays(6),
+                        observedThrough = if (weeksAgo == 0) LocalDate.of(2026, 10, 11)
+                        else weekStart.plusDays(6),
+                        completedDays = listOf(1, 3, 0, 4, 2)[4 - weeksAgo],
+                        notYetCreated = false,
+                        isCurrentWeek = weeksAgo == 0
+                    )
+                }
             ),
             onRetry = {}
         )
@@ -203,7 +218,7 @@ fun StatsContentEmptyPreview() {
     HabitTrackerTheme {
         StatsContent(
             uiState = StatsUiState.Success(
-                StatsSummary(0, 0, 0, 0, 0, emptyList())
+                StatsSummary(0, 0, 0, 0, emptyList())
             ),
             onRetry = {}
         )

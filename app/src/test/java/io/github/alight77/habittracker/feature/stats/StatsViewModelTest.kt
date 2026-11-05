@@ -18,12 +18,16 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class StatsViewModelTest {
@@ -111,7 +115,6 @@ class StatsViewModelTest {
                 totalHabits = 2,
                 todayDoneCount = 1,
                 totalDoneCount = 3,
-                recentSevenDayGoalPercent = 14,
                 longestStreak = 1,
                 recentSevenDayCounts = (6L downTo 0L).map { daysAgo ->
                     val date = today.minusDays(daysAgo)
@@ -182,13 +185,195 @@ class StatsViewModelTest {
         assertEquals(3, subscriptionCount)
     }
 
-    private fun habit(id: Int, name: String): HabitEntity {
+    @Test
+    fun defaultSelection_usesNewestCreationAndIdForTies() = runTest {
+        val today = LocalDate.of(2026, 9, 21)
+        val habits = TestHabitDao(listOf(
+            habit(8, "同日较小 ID", createdAt = 2),
+            habit(1, "较早", createdAt = 1),
+            habit(9, "同日较大 ID", createdAt = 2)
+        ))
+        val viewModel = StatsViewModel(habits, TestRecordDao(emptyList()), flowOf(today))
+        backgroundScope.launch { viewModel.uiState.collect() }
+        runCurrent()
+
+        val state = viewModel.successState()
+        assertEquals(listOf(9, 8, 1), state.availableHabits.map { it.id })
+        assertEquals(9, state.selectedHabitId)
+        assertEquals(5, state.weeklyTrend.size)
+
+        habits.deleteHabitById(9)
+        runCurrent()
+        assertEquals(8, viewModel.successState().selectedHabitId)
+    }
+
+    @Test
+    fun selectingHabits_updatesTrendWithoutRecalculatingSummaryOrWritingData() = runTest {
+        val today = LocalDate.of(2026, 9, 21)
+        val habits = TestHabitDao(listOf(habit(1, "阅读"), habit(2, "运动")))
+        val records = TestRecordDao(listOf(record(1, today, true), record(2, today, false)))
+        val viewModel = StatsViewModel(habits, records, flowOf(today))
+        backgroundScope.launch { viewModel.uiState.collect() }
+        runCurrent()
+        val before = viewModel.successState()
+        assertEquals(2, before.selectedHabitId)
+        assertEquals(0, before.weeklyTrend.last().completedDays)
+
+        viewModel.onHabitSelected(1)
+        runCurrent()
+        val selected = viewModel.successState()
+        assertEquals(1, selected.selectedHabitId)
+        assertEquals(1, selected.weeklyTrend.last().completedDays)
+        assertSame(before.summary, selected.summary)
+        assertEquals(true, records.getRecordByDate(1, today.toEpochDay())?.isDone)
+
+        viewModel.onHabitSelected(2)
+        viewModel.onHabitSelected(1)
+        runCurrent()
+        assertEquals(1, viewModel.successState().selectedHabitId)
+        viewModel.onHabitSelected(999)
+        runCurrent()
+        assertEquals(1, viewModel.successState().selectedHabitId)
+    }
+
+    @Test
+    fun addingRenamingAndDeletingHabits_preservesOrFallsBackSelection() = runTest {
+        val today = LocalDate.of(2026, 9, 21)
+        val habits = TestHabitDao(listOf(habit(1, "阅读", 1), habit(2, "运动", 2)))
+        val viewModel = StatsViewModel(habits, TestRecordDao(emptyList()), flowOf(today))
+        backgroundScope.launch { viewModel.uiState.collect() }
+        runCurrent()
+        viewModel.onHabitSelected(1)
+        runCurrent()
+
+        habits.insertHabit(habit(3, "冥想", 3))
+        runCurrent()
+        assertEquals(1, viewModel.successState().selectedHabitId)
+
+        habits.updateHabit(habit(1, "阅读新版", 1))
+        runCurrent()
+        val renamed = viewModel.successState()
+        assertEquals(1, renamed.selectedHabitId)
+        assertEquals("阅读新版", renamed.availableHabits.first { it.id == 1 }.name)
+
+        habits.deleteHabitById(2)
+        runCurrent()
+        assertEquals(1, viewModel.successState().selectedHabitId)
+
+        habits.deleteHabitById(1)
+        runCurrent()
+        assertEquals(3, viewModel.successState().selectedHabitId)
+
+        habits.deleteHabitById(3)
+        runCurrent()
+        val empty = viewModel.successState()
+        assertEquals(null, empty.selectedHabitId)
+        assertTrue(empty.availableHabits.isEmpty())
+        assertTrue(empty.weeklyTrend.isEmpty())
+        assertEquals(0, empty.summary.totalHabits)
+
+        habits.insertHabit(habit(4, "新习惯", 4))
+        runCurrent()
+        assertEquals(4, viewModel.successState().selectedHabitId)
+    }
+
+    @Test
+    fun checkingAndUndoingToday_updatesSelectedTrend() = runTest {
+        val today = LocalDate.of(2026, 9, 21)
+        val records = TestRecordDao(emptyList())
+        val viewModel = StatsViewModel(
+            TestHabitDao(listOf(habit(1, "阅读"))), records, flowOf(today)
+        )
+        backgroundScope.launch { viewModel.uiState.collect() }
+        runCurrent()
+        assertEquals(0, viewModel.successState().weeklyTrend.last().completedDays)
+
+        records.setRecordChecked(1, today.toEpochDay(), true)
+        runCurrent()
+        assertEquals(1, viewModel.successState().weeklyTrend.last().completedDays)
+
+        records.setRecordChecked(1, today.toEpochDay(), false)
+        runCurrent()
+        assertEquals(0, viewModel.successState().weeklyTrend.last().completedDays)
+    }
+
+    @Test
+    fun createdAtUsesSystemZoneAndExcludesEarlierCheckIns() = runTest {
+        val today = LocalDate.of(2026, 9, 23)
+        val createdDate = today.minusDays(1)
+        val createdAt = createdDate.atTime(12, 0)
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val viewModel = StatsViewModel(
+            TestHabitDao(listOf(habit(1, "阅读", createdAt))),
+            TestRecordDao(listOf(
+                record(1, createdDate.minusDays(1), true),
+                record(1, createdDate, true)
+            )),
+            flowOf(today)
+        )
+        backgroundScope.launch { viewModel.uiState.collect() }
+        runCurrent()
+
+        assertEquals(1, viewModel.successState().weeklyTrend.last().completedDays)
+    }
+
+    @Test
+    fun dateCrossingMonday_movesFiveWeekWindow() = runTest {
+        val sunday = LocalDate.of(2026, 9, 20)
+        val monday = sunday.plusDays(1)
+        val todaySource = MutableStateFlow(sunday)
+        val viewModel = StatsViewModel(
+            TestHabitDao(listOf(habit(1, "阅读"))),
+            TestRecordDao(listOf(record(1, sunday, true), record(1, monday, true))),
+            todaySource
+        )
+        backgroundScope.launch { viewModel.uiState.collect() }
+        runCurrent()
+        val previous = viewModel.successState().weeklyTrend
+        assertEquals(sunday.minusDays(6), previous.last().weekStart)
+        assertEquals(1, previous.last().completedDays)
+
+        todaySource.value = monday
+        runCurrent()
+        val current = viewModel.successState().weeklyTrend
+        assertEquals(previous[1].weekStart, current.first().weekStart)
+        assertEquals(monday, current.last().weekStart)
+        assertEquals(1, current[3].completedDays)
+        assertEquals(1, current.last().completedDays)
+        assertEquals(monday, current.last().observedThrough)
+    }
+
+    @Test
+    fun selectionSurvivesWhileSubscribedStopAndRestart() = runTest {
+        val today = LocalDate.of(2026, 9, 21)
+        val habits = TestHabitDao(listOf(habit(1, "阅读", 1), habit(2, "运动", 2)))
+        val viewModel = StatsViewModel(habits, TestRecordDao(emptyList()), flowOf(today))
+        val collector = backgroundScope.launch { viewModel.uiState.collect() }
+        runCurrent()
+        viewModel.onHabitSelected(1)
+        runCurrent()
+        collector.cancel()
+        advanceTimeBy(5_001)
+        runCurrent()
+
+        habits.insertHabit(habit(3, "冥想", 3))
+        backgroundScope.launch { viewModel.uiState.collect() }
+        runCurrent()
+        assertEquals(1, viewModel.successState().selectedHabitId)
+        assertEquals(listOf(3, 2, 1), viewModel.successState().availableHabits.map { it.id })
+    }
+
+    private fun StatsViewModel.successState(): StatsUiState.Success {
+        return uiState.value as StatsUiState.Success
+    }
+
+    private fun habit(id: Int, name: String, createdAt: Long = 0): HabitEntity {
         return HabitEntity(
             id = id,
             name = name,
             description = "",
             targetPerWeek = 7,
-            createdAt = 0
+            createdAt = createdAt
         )
     }
 
