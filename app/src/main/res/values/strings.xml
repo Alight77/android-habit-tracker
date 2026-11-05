@@ -46,7 +46,7 @@
     <string name="habit_icon_clean">Cleaning</string>
     <string name="weekly_goal">Weekly goal</string>
     <string name="weekly_goal_value">%1$d per week</string>
-    <string name="weekly_plan_flexible">Your weekly goal is %1$d. Choose the days that work for you.</string>
+    <string name="weekly_plan_flexible">Check in on any days to reach your goal of %1$d per week.</string>
     <string name="weekly_plan_every_day">A goal of 7 per week means checking in every day.</string>
     <string name="decrease_weekly_goal">Decrease weekly goal</string>
     <string name="increase_weekly_goal">Increase weekly goal</string>
@@ -94,8 +94,9 @@
         <item>Let your habits grow slowly,\nand let yourself grow with them.</item>
     </string-array>
     <string name="check_in">Check in</string>
-    <string name="completed">Completed</string>
+    <string name="undo_check_in">Undo</string>
     <string name="habit_check_content_description">%1$s: %2$s</string>
+    <string name="habit_check_undo_content_description">%1$s, Undo today\'s check-in</string>
     <string name="habit_check_incomplete_state">Not completed</string>
     <string name="habit_check_completed_state">Completed</string>
     <string name="habit_more_actions">More actions for %1$s</string>

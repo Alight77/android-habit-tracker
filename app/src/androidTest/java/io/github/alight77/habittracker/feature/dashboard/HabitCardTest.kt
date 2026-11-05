@@ -89,14 +89,14 @@ class HabitCardTest {
     }
 
     @Test
-    fun completedHabit_exposesCompletedActionAndState() {
+    fun completedHabit_exposesUndoActionAndCompletedState() {
         setHabitCardContent(isDoneToday = true)
 
-        composeRule.onNodeWithText("已完成", useUnmergedTree = true)
+        composeRule.onNodeWithText("撤销", useUnmergedTree = true)
             .assertIsDisplayed()
         composeRule.onNodeWithText("✓", useUnmergedTree = true)
             .assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("已完成：阅读")
+        composeRule.onNodeWithContentDescription("阅读，撤销今天的打卡")
             .assertHasClickAction()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "已完成"))
     }
@@ -116,7 +116,7 @@ class HabitCardTest {
 
         composeRule.onNodeWithTag("habit_card_icon_general", useUnmergedTree = true)
             .assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("已完成：阅读")
+        composeRule.onNodeWithContentDescription("阅读，撤销今天的打卡")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "已完成"))
     }
 
@@ -396,8 +396,11 @@ class HabitCardTest {
             .fetchSemanticsNodes()
         val marker = composeRule.onNodeWithTag("recent-check-in-today-marker", useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot
-        val completed = composeRule.onNodeWithContentDescription("Completed: $name")
+        val completed = composeRule.onNodeWithContentDescription("$name, Undo today's check-in")
             .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        composeRule.onNodeWithText("Undo", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("$name, Undo today's check-in")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Completed"))
         assertEquals(7, squares.size)
         squares.forEach { square ->
             assertTrue(square.boundsInRoot.left >= area.left - 1f)
@@ -406,6 +409,39 @@ class HabitCardTest {
         assertTrue(marker.left >= area.left - 1f && marker.right <= area.right + 1f)
         assertTrue(marker.bottom < completed.top)
         composeRule.onNodeWithText("Su", useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun englishUncheckedHabit_exposesCheckInActionAndState() {
+        composeRule.setContent {
+            WithLocale(Locale.US) {
+                HabitTrackerTheme {
+                    HabitCard(
+                        habit = HabitItemUiState(
+                            id = 1,
+                            name = "Reading",
+                            targetPerWeek = 3,
+                            isDoneToday = false,
+                            streak = 0,
+                            recentDays = recentCheckInDays(
+                                LocalDate.of(2026, 10, 11),
+                                emptyList(),
+                                LocalDate.of(2026, 10, 11)
+                            )
+                        ),
+                        today = LocalDate.of(2026, 10, 11),
+                        onCheckClick = {},
+                        onEditClick = {},
+                        onDeleteClick = {}
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Check in", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Check in: Reading")
+            .assertHasClickAction()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Not completed"))
     }
 
     private fun setHabitCardContent(

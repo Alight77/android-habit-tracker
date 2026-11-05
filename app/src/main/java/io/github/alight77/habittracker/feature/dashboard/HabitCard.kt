@@ -332,15 +332,16 @@ private fun HabitCheckButton(
     val colors = MaterialTheme.colorScheme
     val largeText = LocalDensity.current.fontScale >= 1.5f
     val done = habit.isDoneToday
-    val actionText = stringResource(if (done) R.string.completed else R.string.check_in)
+    val actionText = stringResource(if (done) R.string.undo_check_in else R.string.check_in)
     val checkStateDescription = stringResource(
         if (done) R.string.habit_check_completed_state else R.string.habit_check_incomplete_state
     )
-    val checkContentDescription = stringResource(
-        R.string.habit_check_content_description,
-        actionText,
-        habit.name
-    )
+    // 完成态的可见短文案与无障碍操作说明分开，状态仍由 stateDescription 表达。
+    val checkContentDescription = if (done) {
+        stringResource(R.string.habit_check_undo_content_description, habit.name)
+    } else {
+        stringResource(R.string.habit_check_content_description, actionText, habit.name)
+    }
 
     Button(
         modifier = modifier

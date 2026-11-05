@@ -94,8 +94,9 @@
         <item>让习惯慢慢生长，\n也让自己慢慢变好。</item>
     </string-array>
     <string name="check_in">打卡</string>
-    <string name="completed">已完成</string>
+    <string name="undo_check_in">撤销</string>
     <string name="habit_check_content_description">%1$s：%2$s</string>
+    <string name="habit_check_undo_content_description">%1$s，撤销今天的打卡</string>
     <string name="habit_check_incomplete_state">未完成</string>
     <string name="habit_check_completed_state">已完成</string>
     <string name="habit_more_actions">更多操作：%1$s</string>

@@ -93,7 +93,7 @@ class TodayForegroundResumeRegressionTest {
                 (viewModel.uiState.value as DashboardUiState.Success).items.single().isDoneToday
 
             // 恢复后卡片代表当前日期，点击应只取消当天记录。
-            composeRule.onNodeWithContentDescription("已完成：阅读").performClick()
+            composeRule.onNodeWithContentDescription("阅读，撤销今天的打卡").performClick()
             composeRule.waitUntil(5_000L) {
                 runBlocking {
                     database.recordDao().getRecordByDate(habitId, afterDate.toEpochDay())?.isDone == false

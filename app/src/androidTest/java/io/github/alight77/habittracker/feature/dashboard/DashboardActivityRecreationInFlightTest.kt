@@ -152,11 +152,7 @@ class DashboardActivityRecreationInFlightTest {
             context.getString(R.string.check_in),
             habitName
         )
-        val checkedDescription = context.getString(
-            R.string.habit_check_content_description,
-            context.getString(R.string.completed),
-            habitName
-        )
+        val checkedDescription = context.getString(R.string.habit_check_undo_content_description, habitName)
 
         fun attachToCurrentActivity(): Pair<ComponentActivity, DashboardViewModel> {
             lateinit var activity: ComponentActivity

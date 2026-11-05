@@ -124,9 +124,7 @@ class DashboardStoppedFailureEventTest {
         val uncheckedDescription = context.getString(
             R.string.habit_check_content_description, context.getString(R.string.check_in), habitName
         )
-        val checkedDescription = context.getString(
-            R.string.habit_check_content_description, context.getString(R.string.completed), habitName
-        )
+        val checkedDescription = context.getString(R.string.habit_check_undo_content_description, habitName)
         val errorText = context.getString(R.string.check_in_persist_failed)
         lateinit var activity: ComponentActivity
         lateinit var viewModel: DashboardViewModel
