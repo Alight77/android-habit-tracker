@@ -1,139 +1,111 @@
-# Habit Tracker · 习惯打卡
+# HabitTracker · 习惯打卡
 
-一个使用 Kotlin、Jetpack Compose 和 Room 实现的本地习惯打卡 App。项目以“完成一个可靠的本地功能闭环”为目标，重点实现响应式 UI、数据一致性、可测试业务逻辑与渐进式工程化能力。
+HabitTracker 是一款本地优先的 Android 习惯打卡应用：创建习惯并设定每周目标，记录每日行动，通过七日打卡足迹和五周趋势回看进展。项目使用 Kotlin、Jetpack Compose、ViewModel、Flow 和 Room 实现，无需账号或开发者服务器即可使用核心功能。
 
-## 功能概览
+## 核心功能
 
-- 创建习惯，并设置每周目标次数（1～7 次）。
-- 编辑习惯名称和每周目标；通过卡片操作菜单删除习惯，并进行二次确认。
-- 今日打卡与取消打卡，支持快速重复点击下的乐观更新、状态收敛和失败回滚提示。
-- 展示当前连续打卡天数、历史最长连续打卡天数，以及每个习惯近 7 天的目标进度。
-- 统计页汇总今日完成数、总打卡次数、习惯数量、最长连续打卡和近 7 天目标达成率。
-- 支持浅色/深色模式与 Android 12 及以上的动态颜色；关键操作具有无障碍语义描述。
+- 创建、编辑和删除习惯，设置每周 1～7 次的目标；删除前确认，并从本机数据库一并删除该习惯的打卡记录。
+- 根据名称中的中英文关键词建议图标，也可手动选择；新增和编辑表单展示当前图标。
+- 在 Today 页面打卡或撤销当天打卡，查看最近七个自然日的记录与当前连续打卡天数。
+- 在 Statistics 页面查看今日完成习惯数、最近七天每天的完成习惯数、现有习惯的累计打卡次数，以及现有习惯中最长的单项历史连续打卡天数。
+- 选择习惯查看最近五个自然周的打卡天数；创建前的整周与创建后零打卡的周使用不同标记，创建当周只统计创建日起的日期，并提示本周仍在进行中。
+- 界面语言与浅色、深色主题跟随系统设置；提供英语默认资源和简体中文文案，并为关键操作添加无障碍语义。
 
-## 界面预览
+**工程重点**
 
-### Dashboard
+- [今日打卡的临时状态](#今日打卡的临时状态)：点击后即时反馈，并协调同一习惯的连续操作。
+- [自然日与统计口径](#自然日与统计口径)：以 epoch day 保存打卡日期，明确当前 streak 与五周趋势的计算边界。
+- [数据库演进](#数据库演进)：通过每日唯一约束和显式 Room 迁移维护历史记录。
 
-<p align="center">
-  <img src="images/DashBoard_1.png" width="45%" alt="Dashboard：暂无习惯时的空状态" />
-  <img src="images/DashBoard_2.png" width="45%" alt="Dashboard：习惯列表与今日打卡状态" />
-</p>
-
-### 新增习惯
+## 应用截图
 
 <p align="center">
-  <img src="images/AddHabit.png" width="45%" alt="新增习惯：名称与每周目标设置" />
+  <img src="images/01-today.png" width="46%" alt="Today：日期、习惯卡片与今日打卡" />
+  <img src="images/02-add-habit.png" width="46%" alt="新增习惯：图标、名称与每周目标" />
 </p>
-
-### 统计页
-
 <p align="center">
-  <img src="images/Stats.png" width="45%" alt="统计页：今日完成、连续打卡与近 7 天目标达成率" />
+  <img src="images/03-statistics.png" width="46%" alt="统计页：所选习惯的五周打卡趋势与历史数据" />
+  <img src="images/04-edit-habit.png" width="46%" alt="编辑习惯：名称、图标与每周目标" />
 </p>
+
+图片来自 Android 模拟器上的真实应用界面，习惯及打卡数据仅用于展示。
 
 ## 技术栈
 
-- Kotlin
-- Jetpack Compose + Material 3
-- MVVM
-- Room + SQLite
-- Kotlin Flow / StateFlow / SharedFlow
-- Navigation Compose
-- JUnit、Room Instrumented Test、Compose UI Test、Android Lint
+- Kotlin、Jetpack Compose、Material 3、Navigation Compose
+- ViewModel、Lifecycle、Kotlin Coroutines、Flow / StateFlow / SharedFlow
+- Room / SQLite、数据库迁移
+- JUnit、Android 仪器测试、Compose UI 测试、Android Lint
 
 ## 架构与数据流
 
 ```text
-Compose UI
-    ↓ 用户意图
-ViewModel
-    ↓ 业务决策 / Repository
-UseCase、Room DAO
-    ↓
-SQLite
-    ↓ Flow 数据变化
-ViewModel UI State
-    ↓
-Compose UI
+Today UI      → DashboardViewModel → SetTodayHabitCheckedUseCase → HabitRepository → RecordDao
+新增 / 编辑 UI → 对应 ViewModel      → HabitRepository                  → HabitDao
+Statistics UI → StatsViewModel      ← HabitDao / RecordDao 的 Flow
+
+HabitDao / RecordDao → Flow → DashboardViewModel / StatsViewModel
+DAO 数据 + 本地日期 + 临时点击状态 → ViewModel 的 UiState → Compose UI
 ```
 
-- Compose 页面只负责状态展示和事件上报；页面通过 `collectAsStateWithLifecycle` 观察 ViewModel 状态。
-- `DashboardViewModel`、`StatsViewModel` 和新增/编辑习惯的 ViewModel 分别组装页面级 UI state。
-- 当前阶段通过 Application 级 `AppContainer` 集中创建数据库、Repository、UseCase 与 ViewModel Factory，`MainActivity` 从容器取得依赖；当前规模下不引入 Hilt 或多模块。
+Compose 页面展示状态并上报操作。今日打卡使用专门的 UseCase；新增、编辑和删除通过 Repository 访问数据；统计 ViewModel 直接观察 DAO Flow。数据库、Repository、UseCase 与 ViewModel Factory 由 Application 级的 `AppContainer` 手动装配，项目保持单模块。
 
-## 关键设计
+主要代码位于 `app/src/main/java/io/github/alight77/habittracker/`：`core/time/` 处理本地日期，`data/` 包含 Room 与 Repository，`domain/` 放置业务约束和打卡逻辑，`feature/` 组织各页面与 ViewModel，`ui/` 放置导航、共享组件和主题。
 
-### 打卡数据一致性与乐观更新
+## 关键工程设计
 
-`RecordEntity` 对 `(habitId, date)` 建立唯一索引，DAO 使用事务收敛单日打卡写入。用户点击后，`SetTodayHabitCheckedUseCase` 先发出乐观状态，再等待持久化数据源确认：
+### 今日打卡的临时状态
 
-- 快速重复点击只保留最新目标状态；
-- 持久化失败或数据源确认超时时，会撤销乐观状态并通过 Snackbar 提示重试；
-- 数据源确认后移除临时覆盖，最终始终以持久化数据源为准。
+点击后，`DashboardViewModel` 立即更新页面中的临时目标状态。`SetTodayHabitCheckedUseCase` 协调同一习惯的操作；有写入正在执行时，同一天的待处理目标可以被后续点击覆盖，但执行中的数据库写入可能已经发生。写入失败或等待数据源确认超时后，ViewModel 会尝试读取持久化记录并调整临时显示；若读取失败，且该意图仍是当前意图，则移除对应的临时覆盖，必要时提示重试。
 
-### 日期与连续打卡
+Room 对 `(habitId, date)` 建立唯一索引，同一习惯同一天最多保留一条记录；撤销打卡会把该记录更新为未完成状态。
 
-打卡日期存储为 epoch day，而不是本地午夜时间戳，避免夏令时与时区换算造成同一天判断不稳定。Dashboard 与统计页分别使用 `systemTodayFlow()` 感知本地日期变化，并重新计算“今日状态”和 streak。
+### 自然日与统计口径
 
-`calculateStreak()` 与 `calculateLongestStreak()` 保持为纯函数：前者用于当前连续天数，后者从完整历史中寻找最长连续片段，二者不混用统计口径。
+打卡日期保存为 epoch day，表示本地自然日而非某个固定时刻。本地自然日改变后，Today 与 Statistics 的相关状态会重新计算。当前连续打卡天数从**今天**向前数；若今天尚未打卡，该值为 0。历史最长连续天数先按现有每个习惯的完整完成记录计算，再取最大值。
 
-### 每周目标与统计口径
-
-每个习惯有独立的 `targetPerWeek`。近 7 天目标进度以滚动窗口统计；对创建不足 7 天的新习惯，有效目标取每周目标次数与窗口内实际可用天数的较小值，完成次数不会超过该有效目标。统计页的“近 7 天目标达成率”汇总这些进度，而非简单的打卡天数比例。
+七日统计的每个值是当天完成的不同习惯数。五周趋势按周一至周日的自然周统计**所选习惯的打卡天数**，本周只计算到今天；创建前的日期不计为漏打卡。图表展示打卡天数，不表示每周目标达成率。
 
 ### 数据库演进
 
-- `MIGRATION_2_3`：将旧的本地午夜毫秒日期转换为 epoch day，合并同一习惯同一天的历史重复记录，并建立唯一索引。
-- `MIGRATION_3_4`：为记录表增加指向习惯表的外键与 `CASCADE` 删除，清理孤立记录。
+当前 Room schema 为 v5，已注册的迁移路径包括：
 
-迁移场景通过 Room 仪器测试覆盖，避免只依赖新装 App 的建表结果。
+- v2 → v3：将旧本地午夜毫秒日期转换为 epoch day，合并同一习惯同一天的重复记录。
+- v3 → v4：为打卡记录增加指向习惯的外键与级联删除，并清理孤立记录。
+- v4 → v5：为习惯增加图标字段，保留既有习惯和打卡记录。
 
-## 项目结构
+## 测试与质量保障
 
-```text
-app/src/main/java/io/github/alight77/habittracker
-├── core/time/              # 本地日期变化的 Flow
-├── data/local/             # Room Entity、DAO 与迁移
-├── data/repository/        # 数据访问封装
-├── domain/model/           # 领域约束
-├── domain/usecase/         # 日期、streak、目标进度与打卡 UseCase
-├── feature/
-│   ├── addhabit/           # 新增习惯 Screen 与 ViewModel
-│   ├── dashboard/          # Dashboard 状态、交互与卡片
-│   ├── edit/               # 编辑习惯 Screen 与 ViewModel
-│   └── stats/              # 统计计算、状态与页面
-├── ui/                     # 共享表单组件、导航与主题
-└── AppContainer、Application、Factory、MainActivity
-```
+仓库包含以下测试代码；这里描述的是覆盖范围，不代表本次 README 修改后重新执行了全套测试：
 
-## 构建与验证
+- JVM 单元测试：日期与 streak 计算、快速重复打卡及并发协调、统计汇总和五周趋势。
+- Android 仪器测试：Room DAO 与迁移、主要页面交互及导航、Compose UI 的统计和表单展示。
+- Android Lint：通过下方命令运行静态检查。
 
-使用 Android Studio 打开项目、完成 Gradle Sync 后，选择 API 24 及以上的设备或模拟器运行 App。
+代表性测试：[快速重复打卡](app/src/test/java/io/github/alight77/habittracker/feature/dashboard/DashboardRapidToggleTest.kt)覆盖连续两次或三次点击时的目标状态切换；[五周趋势](app/src/test/java/io/github/alight77/habittracker/feature/stats/WeeklyCheckInTrendTest.kt)覆盖创建当周与创建前整周；[数据库迁移](app/src/androidTest/java/io/github/alight77/habittracker/data/local/HabitDatabaseMigrationTest.kt)覆盖旧日期转换与记录保留。
+
+## 构建与运行
+
+使用支持本项目 AGP 9.0.1 的 Android Studio，配置 JDK 17 与 Android SDK Platform 36。仓库已包含 Gradle 9.1.0 Wrapper；应用的 `minSdk` 为 24，可在 API 24 及以上的设备或模拟器运行。[AGP 9.0.1 官方兼容说明](https://developer.android.com/build/releases/agp-9-0-0-release-notes)列出了对应的 JDK 与 Gradle 要求。
+
+在 Android Studio 打开项目并完成 Gradle Sync，选择设备后运行 `app`。也可在 Windows PowerShell 中执行：
 
 ```powershell
-# Kotlin 编译检查
-.\gradlew.bat :app:compileDebugKotlin
-
-# JVM 单元测试：纯函数、UseCase、ViewModel 等
+.\gradlew.bat :app:assembleDebug
 .\gradlew.bat :app:testDebugUnitTest
-
-# AVD / 真机仪器测试：Room、迁移和 Compose UI
-.\gradlew.bat :app:connectedDebugAndroidTest
-
-# 静态检查
 .\gradlew.bat :app:lintDebug
 ```
 
-最近一次完整验证中，Lint 为 0 errors；仪器测试 24/24 通过。
+连接 Android 设备或启动模拟器后，运行仪器测试：
 
-## 有意保留的边界
+```powershell
+.\gradlew.bat :app:connectedDebugAndroidTest
+```
 
-为了保持项目范围聚焦、核心链路清晰，当前不引入以下内容：
+## 数据隐私
 
-- Hilt、复杂 MVI 或多模块拆分；
-- 登录、云同步、服务端接口；
-- 通知调度、复杂统计图表、完整设计系统；
-- 为消除版本提示而进行的集中依赖升级，或发布级 CI/CD。
+习惯名称、每周目标、图标和打卡记录主要保存在设备上的应用私有 Room 数据库中。应用不提供账号或开发者运营的云同步，也没有向开发者服务器同步习惯记录的功能。Android 系统备份和设备迁移可能在满足设备及系统条件时包含该数据库。详见[隐私政策](https://alight77.github.io/android-habit-tracker/)。
 
-这些可作为后续演进方向；当前版本优先保证本地功能闭环、代码边界和验证证据清晰。
+## 版本与发布状态
+
+当前**源码配置**为 `versionName 1.0`、`versionCode 2`，应用 ID 为 `io.github.alight77.habittracker`。Google Play 正式版仍在发布流程中；公开下载链接将在确认上架后补充。对应当前源码的 GitHub Release 将另行更新。
